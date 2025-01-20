@@ -1,6 +1,13 @@
 import threading
 import time
-from rover import MotorController, SensorController, NavigationController
+import socket
+import json
+import platform
+
+if platform.system() == "Linux":
+    from controllers import MotorController, SensorController, NavigationController
+else:
+    from dummy import MotorController, SensorController, NavigationController
 
 # State Machine States
 class RoverState:
@@ -9,9 +16,9 @@ class RoverState:
     AVOIDING_OBSTACLE = "AvoidingObstacle"
     PURSUING_RESOURCE = "PursuingResource"
 
-# Pi Class for Autonomous Control
+# AutoPi Class for Autonomous Control
 class AutoPi:
-    def __init__(self):
+    def __init__(self, telemetry_ip, telemetry_port):
         self.state = RoverState.IDLE
         self.motor_controller = MotorController()
         self.sensor_controller = SensorController()
@@ -20,10 +27,29 @@ class AutoPi:
         self.target_resource = None
         self.lock = threading.Lock()
 
+        # Telemetry
+        self.telemetry_ip = telemetry_ip
+        self.telemetry_port = telemetry_port
+        self.telemetry_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        self.telemetry_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        self.telemetry_thread = threading.Thread(target=self.telemetry_loop, daemon=True)
+        self.telemetry_thread.start()
+
     def set_state(self, new_state):
         with self.lock:
             print(f"State change: {self.state} -> {new_state}")
             self.state = new_state
+
+    def telemetry_loop(self):
+        while True:
+            telemetry_data = {
+                "position": self.sensor_controller.get_position(),
+                "heading": self.sensor_controller.get_heading(),
+                "battery_level": self.sensor_controller.get_battery_level(),
+                "ultrasound_distance": self.sensor_controller.get_ultrasound_distance(),
+            }
+            self.telemetry_socket.sendto(json.dumps(telemetry_data).encode("utf-8"), (self.telemetry_ip, self.telemetry_port))
+            time.sleep(1)  # Send updates every second
 
     def exploration_mode(self):
         while self.state == RoverState.EXPLORING:
@@ -33,9 +59,6 @@ class AutoPi:
                 return
 
             self.navigation_controller.follow_path(self.current_path)
-            position = self.sensor_controller.get_position()
-            print(f"Current position: {position}")
-
             resource = self.sensor_controller.detect_resource()
             if resource:
                 self.target_resource = resource
@@ -72,7 +95,10 @@ class AutoPi:
                 time.sleep(0.1)
 
 if __name__ == "__main__":
-    pi = AutoPi()
+    TELEMETRY_IP = "127.0.0.1"  # Replace with actual IP address
+    TELEMETRY_PORT = 50055  # Replace with actual port
+
+    pi = AutoPi(TELEMETRY_IP, TELEMETRY_PORT)
 
     # Start in exploring mode
     pi.set_state(RoverState.EXPLORING)
