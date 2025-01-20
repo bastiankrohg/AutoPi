@@ -6,6 +6,7 @@ import platform
 import argparse
 
 from planning import AStarPlanner
+from obstacle import ObstacleDetector
 
 if platform.system() == "Linux":
     from controllers import MotorController, SensorController, NavigationController
