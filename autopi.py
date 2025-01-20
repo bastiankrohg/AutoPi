@@ -7,7 +7,7 @@ import argparse
 
 from planning import AStarPlanner
 from obstacle import ObstacleDetector
-from path import generate_expanding_square_path, generate_random_walk_path, generate_sine_wave_path, generate_spiral_pattern, generate_zigzag_pattern
+from path import generate_expanding_square_path, generate_random_walk_path, generate_sine_wave_path, generate_spiral_pattern, generate_zigzag_pattern, generate_straight_line_path
 
 if platform.system() == "Linux":
     from controllers import MotorController, SensorController, NavigationController
@@ -23,7 +23,7 @@ class RoverState:
 
 # AutoPi Class for Autonomous Control
 class AutoPi:
-    def __init__(self, telemetry_ip, telemetry_port, debug_mode=False):
+    def __init__(self, telemetry_ip, telemetry_port, debug_mode=False, path_type="straight_line"):
         print("Initializing AutoPi...")
         self.state = RoverState.IDLE
         self.motor_controller = MotorController()
@@ -38,6 +38,9 @@ class AutoPi:
         self.planner = AStarPlanner(self.grid_size)
         self.debug_mode = debug_mode
         self.heading = "N"  # Default heading is North
+
+        # Path selection
+        self.path_type = path_type
 
         # Obstacle Detector
         self.obstacle_detector = ObstacleDetector(self.sensor_controller.get_ultrasound_distance,
@@ -107,6 +110,21 @@ class AutoPi:
                 print(row)
             print(f"Current Path: {self.current_path}")
 
+    def generate_path(self):
+        """
+        Generate a path based on the selected path type.
+        """
+        if self.path_type == "random_walk":
+            return generate_random_walk_path(steps=50, step_size=1, start_position=self.map_center)
+        elif self.path_type == "spiral":
+            return generate_spiral_pattern(step_size=1, num_turns=10, start_position=self.map_center)
+        elif self.path_type == "zigzag":
+            return generate_zigzag_pattern(step_size=1, width=5, height=3, start_position=self.map_center)
+        elif self.path_type == "straight_line":
+            return generate_straight_line_path(length=10, step_size=1, start_position=self.map_center)
+        else:
+            raise ValueError(f"Unknown path type: {self.path_type}")
+
     def exploration_mode(self):
         print("Entering exploration mode...")
         while self.state == RoverState.EXPLORING:
@@ -116,9 +134,8 @@ class AutoPi:
                 self.set_state(RoverState.AVOIDING_OBSTACLE)
                 return
 
-            goal = (self.map_center[0], self.map_center[1] - 5)  # Move north/up
-            self.current_path = self.planner.plan(self.map_center, goal, self.obstacles)
-            print(f"Planned path: {self.current_path}")
+            self.current_path = self.generate_path()
+            print(f"Generated path: {self.current_path}")
 
             while self.current_path and self.state == RoverState.EXPLORING:
                 self.update_map()
@@ -173,13 +190,14 @@ class AutoPi:
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="AutoPi Rover")
     parser.add_argument("--debug", action="store_true", help="Enable debug mode to display mapping grid and path planning.")
+    parser.add_argument("--path", type=str, default="straight_line", help="Select path type: random_walk, spiral, zigzag, straight_line")
     args = parser.parse_args()
 
     TELEMETRY_IP = "127.0.0.1"  # Replace with actual IP address
     TELEMETRY_PORT = 50055  # Replace with actual port
 
     print("Initializing rover...")
-    pi = AutoPi(TELEMETRY_IP, TELEMETRY_PORT, debug_mode=args.debug)
+    pi = AutoPi(TELEMETRY_IP, TELEMETRY_PORT, debug_mode=args.debug, path_type=args.path)
 
     # Start in exploring mode
     print("Setting initial state to EXPLORING...")

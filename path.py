@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import random
 
-def generate_sine_wave_path(amplitude, wavelength, total_distance, step_size=1):
+def generate_sine_wave_path(amplitude, wavelength, total_distance, step_size=1, start_position=(0, 0)):
     """
     Generate a sine wave path.
 
@@ -11,16 +11,18 @@ def generate_sine_wave_path(amplitude, wavelength, total_distance, step_size=1):
     - wavelength (float): The distance over which the wave repeats.
     - total_distance (float): The total horizontal distance to cover.
     - step_size (float): The horizontal distance between each point.
+    - start_position (tuple): Starting position (x, y) of the path.
 
     Returns:
     - list of tuples: A list containing (x, y) coordinates of the path.
     """
+    x_start, y_start = start_position
     x_values = np.arange(0, total_distance, step_size)
     y_values = amplitude * np.sin(2 * np.pi * x_values / wavelength)
-    path = list(zip(x_values, y_values))
+    path = [(x_start + x, y_start + y) for x, y in zip(x_values, y_values)]
     return path
 
-def generate_expanding_square_path(step_size, num_layers):
+def generate_expanding_square_path(step_size, num_layers, start_position=(0,0)):
     """
     Generate an expanding square path starting from the center.
 
@@ -31,8 +33,8 @@ def generate_expanding_square_path(step_size, num_layers):
     Returns:
     - list of tuples: A list containing (x, y) coordinates of the path.
     """
-    path = [(0, 0)]  # Start at the origin
-    x, y = 0, 0
+    path = [start_position]  
+    x, y = start_position
     directions = [(0, step_size), (step_size, 0), (0, -step_size), (-step_size, 0)]  # Up, Right, Down, Left
     dir_index = 0  # Start by moving up
 
@@ -146,6 +148,28 @@ def generate_zigzag_pattern(step_size, width, height, start_position=(0, 0)):
         path.append((x, y))
 
     return path
+
+def generate_straight_line_path(length, step_size, start_position=(0, 0)):
+    """
+    Generate a straight-line path.
+
+    Parameters:
+    - length (int): Number of steps in the straight line.
+    - step_size (float): Distance of each step.
+    - start_position (tuple): Starting position (x, y) of the path.
+
+    Returns:
+    - list of tuples: A list containing (x, y) coordinates of the path.
+    """
+    x, y = start_position
+    path = [(x, y)]
+
+    for _ in range(length):
+        y -= step_size  # Move north/up
+        path.append((x, y))
+
+    return path
+
 
 if __name__ == "__main__":
 
