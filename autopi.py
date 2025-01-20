@@ -38,6 +38,11 @@ class AutoPi:
         self.debug_mode = debug_mode
         self.heading = "N"  # Default heading is North
 
+        # Obstacle Detector
+        self.obstacle_detector = ObstacleDetector(self.sensor_controller.get_ultrasound_distance,
+                                                  self.sensor_controller.detect_resource)
+        self.obstacle_detector.start()
+
         # Telemetry
         self.telemetry_ip = telemetry_ip
         self.telemetry_port = telemetry_port
@@ -82,7 +87,7 @@ class AutoPi:
             for y in range(-map_offset, map_offset):
                 row = ""
                 for x in range(-map_offset, map_offset):
-                    map_pos = (self.map_center[0] + x, self.map_center[1] - y)
+                    map_pos = (self.map_center[0] + x, self.map_center[1] + y)
                     if map_pos in self.obstacles:
                         row += "X "
                     elif map_pos == self.map_center:
@@ -97,7 +102,13 @@ class AutoPi:
     def exploration_mode(self):
         print("Entering exploration mode...")
         while self.state == RoverState.EXPLORING:
-            goal = (self.map_center[0], self.map_center[1] + 5)  # Move north/up
+            if self.obstacle_detector.is_alerted():
+                print(f"Obstacle detected! Source: {self.obstacle_detector.get_alert_source()}")
+                self.obstacle_detector.reset_alert()
+                self.set_state(RoverState.AVOIDING_OBSTACLE)
+                return
+
+            goal = (self.map_center[0], self.map_center[1] - 5)  # Move north/up
             self.current_path = self.planner.plan(self.map_center, goal, self.obstacles)
             print(f"Planned path: {self.current_path}")
 
@@ -114,12 +125,19 @@ class AutoPi:
 
     def avoidance_mode(self):
         print("Entering avoidance mode...")
-        while self.state == RoverState.AVOIDING_OBSTACLE:
-            if self.navigation_controller.navigate_around_obstacle():
-                print("Obstacle avoided. Returning to exploration mode.")
+        # Simple replan logic to avoid obstacle
+        new_goal = (self.map_center[0] + 2, self.map_center[1] + 2)  # Example: move diagonally
+        self.current_path = self.planner.plan(self.map_center, new_goal, self.obstacles)
+        print(f"Replanned path to avoid obstacle: {self.current_path}")
+
+        while self.current_path and self.state == RoverState.AVOIDING_OBSTACLE:
+            self.update_map()
+            self.display_debug_info()
+            if not self.obstacle_detector.is_alerted():
+                print("Obstacle cleared. Returning to exploration mode.")
                 self.set_state(RoverState.EXPLORING)
                 return
-            time.sleep(0.1)
+            time.sleep(0.5)
 
     def pursuit_mode(self):
         print("Entering pursuit mode...")
