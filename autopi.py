@@ -68,12 +68,14 @@ class AutoPi:
     def display_debug_info(self):
         if self.debug_mode:
             print("Local Map:")
-            for y in range(self.grid_size):
+            map_offset = self.grid_size // 2
+            for y in range(-map_offset, map_offset):
                 row = ""
-                for x in range(self.grid_size):
-                    if (x, y) in self.obstacles:
+                for x in range(-map_offset, map_offset):
+                    map_pos = (self.map_center[0] + x, self.map_center[1] + y)
+                    if map_pos in self.obstacles:
                         row += "X "
-                    elif (x, y) == self.map_center:
+                    elif map_pos == self.map_center:
                         row += "R "
                     else:
                         row += ". "
