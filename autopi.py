@@ -7,6 +7,7 @@ import argparse
 
 from planning import AStarPlanner
 from obstacle import ObstacleDetector
+from path import generate_expanding_square_path, generate_random_walk_path, generate_sine_wave_path, generate_spiral_pattern, generate_zigzag_pattern
 
 if platform.system() == "Linux":
     from controllers import MotorController, SensorController, NavigationController
@@ -52,6 +53,10 @@ class AutoPi:
         self.telemetry_thread.start()
         print("AutoPi initialized.")
 
+        # Draw initial map if in debug mode
+        if self.debug_mode:
+            self.display_debug_info()
+
     def set_state(self, new_state):
         with self.lock:
             print(f"State change: {self.state} -> {new_state}")
@@ -60,11 +65,14 @@ class AutoPi:
     def telemetry_loop(self):
         print("Starting telemetry loop...")
         while True:
+            proximity_alert = self.obstacle_detector.get_alert_source() if self.obstacle_detector.is_alerted() else None
             telemetry_data = {
                 "position": self.map_center,
                 "heading": self.heading,
                 "battery_level": self.sensor_controller.get_battery_level(),
                 "ultrasound_distance": self.sensor_controller.get_ultrasound_distance(),
+                "state": self.state,  # Add current state to telemetry
+                "proximity_alert": proximity_alert  # Add proximity indicator
             }
             print(f"Telemetry data: {telemetry_data}")
             self.telemetry_socket.sendto(json.dumps(telemetry_data).encode("utf-8"), (self.telemetry_ip, self.telemetry_port))
