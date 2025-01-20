@@ -27,6 +27,13 @@ class MotorController:
         """Stops the rover's motors."""
         rover.stop()
 
+    def turn(self, angle):
+        """Turns the rover by the specified angle."""
+        if angle > 0:
+            self.turn_right(abs(angle))
+        elif angle < 0:
+            self.turn_left(abs(angle))
+
 class SensorController:
     def __init__(self):
         """Initializes the sensor controller for the rover."""
