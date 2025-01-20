@@ -122,6 +122,8 @@ class AutoPi:
             return generate_zigzag_pattern(step_size=1, width=5, height=3, start_position=self.map_center)
         elif self.path_type == "straight_line":
             return generate_straight_line_path(length=10, step_size=1, start_position=self.map_center)
+        elif self.path_type == "sine_wave":
+            return generate_sine_wave_path(amplitude=5, wavelength=10, total_distance=50, start_position=self.map_center)
         else:
             raise ValueError(f"Unknown path type: {self.path_type}")
 
@@ -150,18 +152,23 @@ class AutoPi:
 
     def avoidance_mode(self):
         print("Entering avoidance mode...")
-        # Simple replan logic to avoid obstacle
-        new_goal = (self.map_center[0] + 2, self.map_center[1] + 2)  # Example: move diagonally
-        self.current_path = self.planner.plan(self.map_center, new_goal, self.obstacles)
-        print(f"Replanned path to avoid obstacle: {self.current_path}")
+        # Replan logic to avoid obstacle and rejoin original path
+        while self.state == RoverState.AVOIDING_OBSTACLE:
+            avoidance_goal = (self.map_center[0] + 2, self.map_center[1] + 2)  # Example: move diagonally to avoid
+            avoidance_path = self.planner.plan(self.map_center, avoidance_goal, self.obstacles)
+            print(f"Avoidance path: {avoidance_path}")
 
-        while self.current_path and self.state == RoverState.AVOIDING_OBSTACLE:
-            self.update_map()
-            self.display_debug_info()
-            if not self.obstacle_detector.is_alerted():
-                print("Obstacle cleared. Returning to exploration mode.")
-                self.set_state(RoverState.EXPLORING)
-                return
+            while avoidance_path:
+                next_position = avoidance_path.pop(0)
+                self.current_path.insert(0, next_position)  # Reinsert planned path ahead
+                self.update_map()
+                self.display_debug_info()
+
+                if not self.obstacle_detector.is_alerted():
+                    print("Obstacle cleared. Returning to planned path.")
+                    self.set_state(RoverState.EXPLORING)
+                    return
+
             time.sleep(0.5)
 
     def pursuit_mode(self):
@@ -190,7 +197,7 @@ class AutoPi:
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="AutoPi Rover")
     parser.add_argument("--debug", action="store_true", help="Enable debug mode to display mapping grid and path planning.")
-    parser.add_argument("--path", type=str, default="straight_line", help="Select path type: random_walk, spiral, zigzag, straight_line")
+    parser.add_argument("--path", type=str, default="straight_line", help="Select path type: random_walk, spiral, zigzag, straight_line, sine_wave")
     args = parser.parse_args()
 
     TELEMETRY_IP = "127.0.0.1"  # Replace with actual IP address

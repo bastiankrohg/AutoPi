@@ -1,71 +1,5 @@
 import numpy as np
-import matplotlib.pyplot as plt
 import random
-
-def generate_sine_wave_path(amplitude, wavelength, total_distance, step_size=1, start_position=(0, 0)):
-    """
-    Generate a sine wave path.
-
-    Parameters:
-    - amplitude (float): The peak deviation of the wave.
-    - wavelength (float): The distance over which the wave repeats.
-    - total_distance (float): The total horizontal distance to cover.
-    - step_size (float): The horizontal distance between each point.
-    - start_position (tuple): Starting position (x, y) of the path.
-
-    Returns:
-    - list of tuples: A list containing (x, y) coordinates of the path.
-    """
-    x_start, y_start = start_position
-    x_values = np.arange(0, total_distance, step_size)
-    y_values = amplitude * np.sin(2 * np.pi * x_values / wavelength)
-    path = [(x_start + x, y_start + y) for x, y in zip(x_values, y_values)]
-    return path
-
-def generate_expanding_square_path(step_size, num_layers, start_position=(0,0)):
-    """
-    Generate an expanding square path starting from the center.
-
-    Parameters:
-    - step_size (float): The distance of each step.
-    - num_layers (int): The number of layers to expand.
-
-    Returns:
-    - list of tuples: A list containing (x, y) coordinates of the path.
-    """
-    path = [start_position]  
-    x, y = start_position
-    directions = [(0, step_size), (step_size, 0), (0, -step_size), (-step_size, 0)]  # Up, Right, Down, Left
-    dir_index = 0  # Start by moving up
-
-    for layer in range(1, num_layers + 1):
-        for _ in range(2):  # Two sides per layer length
-            for _ in range(layer):
-                dx, dy = directions[dir_index]
-                x += dx
-                y += dy
-                path.append((x, y))
-            dir_index = (dir_index + 1) % 4  # Turn to the next direction
-
-    return path
-
-def visualize_path(path, title="Path Visualization"):
-    """
-    Visualize the generated path.
-
-    Parameters:
-    - path (list of tuples): The (x, y) coordinates of the path.
-    - title (str): The title of the plot.
-    """
-    x_coords, y_coords = zip(*path)
-    plt.figure(figsize=(8, 8))
-    plt.plot(x_coords, y_coords, marker='o')
-    plt.title(title)
-    plt.xlabel('X')
-    plt.ylabel('Y')
-    plt.grid(True)
-    plt.axis('equal')
-    plt.show()
 
 def generate_random_walk_path(steps, step_size, start_position=(0, 0)):
     """
@@ -149,29 +83,56 @@ def generate_zigzag_pattern(step_size, width, height, start_position=(0, 0)):
 
     return path
 
-def generate_straight_line_path(length, step_size, start_position=(0, 0)):
+def generate_sine_wave_path(amplitude, wavelength, total_distance, step_size=1, start_position=(0, 0)):
     """
-    Generate a straight-line path.
+    Generate a sine wave path.
 
     Parameters:
-    - length (int): Number of steps in the straight line.
-    - step_size (float): Distance of each step.
+    - amplitude (float): The peak deviation of the wave.
+    - wavelength (float): The distance over which the wave repeats.
+    - total_distance (float): The total horizontal distance to cover.
+    - step_size (float): The horizontal distance between each point.
     - start_position (tuple): Starting position (x, y) of the path.
 
     Returns:
     - list of tuples: A list containing (x, y) coordinates of the path.
     """
-    x, y = start_position
-    path = [(x, y)]
+    x_start, y_start = start_position
+    x_values = np.arange(0, total_distance, step_size)
+    y_values = amplitude * np.sin(2 * np.pi * x_values / wavelength)
+    path = [(round(x_start + x), round(y_start + y)) for x, y in zip(x_values, y_values)]
+    return path
 
-    for _ in range(length):
-        y -= step_size  # Move north/up
-        path.append((x, y))
+def generate_expanding_square_path(step_size, num_layers, start_position=(0, 0)):
+    """
+    Generate an expanding square path starting from the center.
+
+    Parameters:
+    - step_size (float): The distance of each step.
+    - num_layers (int): The number of layers to expand.
+    - start_position (tuple): Starting position (x, y) of the path.
+
+    Returns:
+    - list of tuples: A list containing (x, y) coordinates of the path.
+    """
+    path = [start_position]  # Start at the origin
+    x, y = start_position
+    directions = [(0, step_size), (step_size, 0), (0, -step_size), (-step_size, 0)]  # Up, Right, Down, Left
+    dir_index = 0  # Start by moving up
+
+    for layer in range(1, num_layers + 1):
+        for _ in range(2):  # Two sides per layer length
+            for _ in range(layer):
+                dx, dy = directions[dir_index]
+                x += dx
+                y += dy
+                path.append((x, y))
+            dir_index = (dir_index + 1) % 4  # Turn to the next direction
 
     return path
 
-
 if __name__ == "__main__":
+    # Example usage
 
     # Generate a random walk path
     random_walk_path = generate_random_walk_path(steps=50, step_size=1, start_position=(5, 5))
@@ -179,11 +140,21 @@ if __name__ == "__main__":
     print(random_walk_path)
 
     # Generate a spiral pattern path
-    spiral_path = generate_spiral_pattern(step_size=1, num_turns=10, start_position=(8, 5))
+    spiral_path = generate_spiral_pattern(step_size=1, num_turns=10, start_position=(5, 5))
     print("Spiral Pattern Path:")
     print(spiral_path)
 
     # Generate a zigzag pattern path
-    zigzag_path = generate_zigzag_pattern(step_size=1, width=5, height=3, start_position=(5, 12))
+    zigzag_path = generate_zigzag_pattern(step_size=1, width=5, height=3, start_position=(5, 5))
     print("Zigzag Pattern Path:")
     print(zigzag_path)
+
+    # Generate a sine wave pattern path
+    sine_wave_path = generate_sine_wave_path(amplitude=5, wavelength=10, total_distance=50, step_size=1, start_position=(5, 5))
+    print("Sine Wave Pattern Path:")
+    print(sine_wave_path)
+
+    # Generate an expanding square pattern path
+    expanding_square_path = generate_expanding_square_path(step_size=1, num_layers=5, start_position=(0, 0))
+    print("Expanding Square Pattern Path:")
+    print(expanding_square_path)
