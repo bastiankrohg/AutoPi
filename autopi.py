@@ -35,7 +35,7 @@ class AutoPi:
         self.obstacles = set()
         self.planner = AStarPlanner(self.grid_size)
         self.debug_mode = debug_mode
-        self.current_position = self.map_center  # Track rover's position
+        self.heading = "N"  # Default heading is North
 
         # Telemetry
         self.telemetry_ip = telemetry_ip
@@ -55,8 +55,8 @@ class AutoPi:
         print("Starting telemetry loop...")
         while True:
             telemetry_data = {
-                "position": self.sensor_controller.get_position(),
-                "heading": self.sensor_controller.get_heading(),
+                "position": self.map_center,
+                "heading": self.heading,
                 "battery_level": self.sensor_controller.get_battery_level(),
                 "ultrasound_distance": self.sensor_controller.get_ultrasound_distance(),
             }
@@ -66,20 +66,13 @@ class AutoPi:
 
     def update_map(self):
         print("Updating map...")
-        position = self.sensor_controller.get_position()
-        self.current_position = (int(position["x"]), int(position["y"]))
-        self.map_center = self.current_position
-        print(f"Current position: {self.current_position}")
-        if self.sensor_controller.check_for_obstacles():
-            print(f"Obstacle detected at {self.current_position}")
-            self.obstacles.add(self.current_position)
-
-    def follow_path(self):
         if self.current_path:
             next_position = self.current_path.pop(0)
-            self.current_position = next_position
-            print(f"Following path to {next_position}")
-            self.motor_controller.move("to", next_position)
+            shift_x = next_position[0] - self.map_center[0]
+            shift_y = next_position[1] - self.map_center[1]
+            self.obstacles = {(x - shift_x, y - shift_y) for (x, y) in self.obstacles}
+            self.map_center = next_position
+            print(f"Environment shifted to keep rover centered at {self.map_center}")
 
     def display_debug_info(self):
         if self.debug_mode:
@@ -88,10 +81,10 @@ class AutoPi:
             for y in range(-map_offset, map_offset):
                 row = ""
                 for x in range(-map_offset, map_offset):
-                    map_pos = (self.map_center[0] + x, self.map_center[1] + y)
+                    map_pos = (self.map_center[0] + x, self.map_center[1] - y)
                     if map_pos in self.obstacles:
                         row += "X "
-                    elif map_pos == self.current_position:
+                    elif map_pos == self.map_center:
                         row += "R "
                     elif map_pos in self.current_path:
                         row += "* "
@@ -103,13 +96,12 @@ class AutoPi:
     def exploration_mode(self):
         print("Entering exploration mode...")
         while self.state == RoverState.EXPLORING:
-            self.update_map()
-            goal = (self.map_center[0] + 5, self.map_center[1])  # Example forward goal
+            goal = (self.map_center[0], self.map_center[1] + 5)  # Move north/up
             self.current_path = self.planner.plan(self.map_center, goal, self.obstacles)
             print(f"Planned path: {self.current_path}")
 
             while self.current_path and self.state == RoverState.EXPLORING:
-                self.follow_path()
+                self.update_map()
                 self.display_debug_info()
                 resource = self.sensor_controller.detect_resource()
                 if resource:
