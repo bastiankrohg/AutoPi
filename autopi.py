@@ -29,7 +29,7 @@ class AutoPi:
         self.state = RoverState.IDLE
         self.motor_controller = MotorController()
         self.sensor_controller = SensorController()
-        self.navigation_controller = NavigationController(self.motor_controller, self.sensor_controller)
+        self.navigation_controller = NavigationController(motor_controller=self.motor_controller, sensor_controller=self.sensor_controller)
         self.current_path = []  # Exploration path
         self.target_resource = None
         self.lock = threading.Lock()

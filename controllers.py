@@ -28,12 +28,21 @@ class MotorController:
         rover.stop()
 
     def turn(self, angle):
-        """Turns the rover by the specified angle."""
-        if angle > 0:
-            self.turn_right(abs(angle))
-        elif angle < 0:
-            self.turn_left(abs(angle))
+            """
+            Turns the rover by the specified angle.
 
+            Parameters:
+            - angle (float): The angle in degrees. Positive for right, negative for left.
+            """
+            if angle > 0:
+                print(f"Turning right by {angle} degrees")
+                self.turn_right(min(abs(angle), 100))  # Limit max speed/angle
+            elif angle < 0:
+                print(f"Turning left by {angle} degrees")
+                self.turn_left(min(abs(angle), 100))  # Limit max speed/angle
+            time.sleep(abs(angle) / 50)  # Simulate time proportional to angle
+            self.stop()  # Ensure the rover stops after turning
+            
 class SensorController:
     def __init__(self):
         """Initializes the sensor controller for the rover."""
