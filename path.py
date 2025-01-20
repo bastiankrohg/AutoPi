@@ -1,6 +1,27 @@
 import numpy as np
 import random
 
+def generate_straight_line_path(length, step_size, start_position=(0, 0)):
+    """
+    Generate a straight-line path.
+
+    Parameters:
+    - length (int): Number of steps in the straight line.
+    - step_size (float): Distance of each step.
+    - start_position (tuple): Starting position (x, y) of the path.
+
+    Returns:
+    - list of tuples: A list containing (x, y) coordinates of the path.
+    """
+    x, y = start_position
+    path = [(x, y)]
+
+    for _ in range(length):
+        y += step_size  # Move north/up
+        path.append((x, y))
+
+    return path
+
 def generate_random_walk_path(steps, step_size, start_position=(0, 0)):
     """
     Generate a random walk path.

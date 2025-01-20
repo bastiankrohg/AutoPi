@@ -123,7 +123,9 @@ class AutoPi:
         elif self.path_type == "straight_line":
             return generate_straight_line_path(length=10, step_size=1, start_position=self.map_center)
         elif self.path_type == "sine_wave":
-            return generate_sine_wave_path(amplitude=5, wavelength=10, total_distance=50, start_position=self.map_center)
+            return generate_sine_wave_path(amplitude=5, wavelength=10, total_distance=50, step_size=1, start_position=self.map_center)
+        elif self.path_type == "expanding_square":
+            return generate_expanding_square_path(step_size=1, num_layers=3, start_position=self.map_center)
         else:
             raise ValueError(f"Unknown path type: {self.path_type}")
 
@@ -197,7 +199,7 @@ class AutoPi:
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="AutoPi Rover")
     parser.add_argument("--debug", action="store_true", help="Enable debug mode to display mapping grid and path planning.")
-    parser.add_argument("--path", type=str, default="straight_line", help="Select path type: random_walk, spiral, zigzag, straight_line, sine_wave")
+    parser.add_argument("--path", type=str, default="straight_line", help="Select path type: random_walk, spiral, zigzag, straight_line, sine_wave, expanding_square")
     args = parser.parse_args()
 
     TELEMETRY_IP = "127.0.0.1"  # Replace with actual IP address
