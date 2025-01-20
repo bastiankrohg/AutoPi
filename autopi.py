@@ -3,6 +3,9 @@ import time
 import socket
 import json
 import platform
+import argparse
+
+from planning import AStarPlanner
 
 if platform.system() == "Linux":
     from controllers import MotorController, SensorController, NavigationController
@@ -18,7 +21,7 @@ class RoverState:
 
 # AutoPi Class for Autonomous Control
 class AutoPi:
-    def __init__(self, telemetry_ip, telemetry_port):
+    def __init__(self, telemetry_ip, telemetry_port, debug_mode=False):
         self.state = RoverState.IDLE
         self.motor_controller = MotorController()
         self.sensor_controller = SensorController()
@@ -26,6 +29,11 @@ class AutoPi:
         self.current_path = []  # Exploration path
         self.target_resource = None
         self.lock = threading.Lock()
+        self.map_center = (0, 0)  # Rover's position in the local map
+        self.grid_size = 20  # Define grid size for local map
+        self.obstacles = set()
+        self.planner = AStarPlanner(self.grid_size)
+        self.debug_mode = debug_mode
 
         # Telemetry
         self.telemetry_ip = telemetry_ip
@@ -51,14 +59,36 @@ class AutoPi:
             self.telemetry_socket.sendto(json.dumps(telemetry_data).encode("utf-8"), (self.telemetry_ip, self.telemetry_port))
             time.sleep(1)  # Send updates every second
 
+    def update_map(self):
+        position = self.sensor_controller.get_position()
+        self.map_center = (int(position["x"]), int(position["y"]))
+        if self.sensor_controller.check_for_obstacles():
+            self.obstacles.add(self.map_center)
+
+    def display_debug_info(self):
+        if self.debug_mode:
+            print("Local Map:")
+            for y in range(self.grid_size):
+                row = ""
+                for x in range(self.grid_size):
+                    if (x, y) in self.obstacles:
+                        row += "X "
+                    elif (x, y) == self.map_center:
+                        row += "R "
+                    else:
+                        row += ". "
+                print(row)
+            print(f"Current Path: {self.current_path}")
+
     def exploration_mode(self):
         while self.state == RoverState.EXPLORING:
-            obstacle_detected = self.sensor_controller.check_for_obstacles()
-            if obstacle_detected:
-                self.set_state(RoverState.AVOIDING_OBSTACLE)
-                return
-
+            self.update_map()
+            goal = (self.map_center[0] + 5, self.map_center[1])  # Example forward goal
+            self.current_path = self.planner.plan(self.map_center, goal, self.obstacles)
             self.navigation_controller.follow_path(self.current_path)
+
+            self.display_debug_info()
+
             resource = self.sensor_controller.detect_resource()
             if resource:
                 self.target_resource = resource
@@ -95,10 +125,14 @@ class AutoPi:
                 time.sleep(0.1)
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="AutoPi Rover")
+    parser.add_argument("--debug", action="store_true", help="Enable debug mode to display mapping grid and path planning.")
+    args = parser.parse_args()
+
     TELEMETRY_IP = "127.0.0.1"  # Replace with actual IP address
     TELEMETRY_PORT = 50055  # Replace with actual port
 
-    pi = AutoPi(TELEMETRY_IP, TELEMETRY_PORT)
+    pi = AutoPi(TELEMETRY_IP, TELEMETRY_PORT, debug_mode=args.debug)
 
     # Start in exploring mode
     pi.set_state(RoverState.EXPLORING)
