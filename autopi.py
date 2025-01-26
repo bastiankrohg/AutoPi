@@ -97,7 +97,7 @@ class AutoPi:
                 message = self.message_queue.get()
                 if message["type"] == "bottle_detected":
                     direction = message["direction"]
-                    print(f"[{datetime.now()}] AutoPi: Bottle detected. Generating path towards direction {direction:.2f}°.")
+                    print(f"[{datetime.now()}] AutoPi: Bottle detected. Generating path towards direction {direction:.2f}Â°.")
                     self.generate_path_towards(direction)
                     self.set_state(RoverState.PURSUING_RESOURCE)  # Transition to pursuing resource state
 
@@ -118,13 +118,13 @@ class AutoPi:
         """
         Generate a path towards the specified direction.
         """
-        print(f"Generating path towards direction {direction:.2f}°...")
+        print(f"Generating path towards direction {direction:.2f}Â°...")
         # Implement path generation logic here using `direction`
        
     def avoid_obstacle(self):
         distance_contournement=self.distance_obstacle/math.cos(45)
         self.rover.TurnRight(45,self.speed_angle_right)
-        self.rover.drive_forward(50) ##calibration du drive_forward à faire
+        self.rover.drive_forward(50) ##calibration du drive_forward Ã  faire
         time.sleep(5)
         self.rover.TurnLeft(45,self.speed_angle_right)
         self.rover.drive_forward(50)
@@ -208,6 +208,7 @@ class AutoPi:
             print(f"Generated path: {self.current_path}")
 
             while self.current_path and self.state == RoverState.EXPLORING:
+                self.navigation_controller.follow_path(self.map_center, self.current_path)
                 self.update_map()
                 self.display_debug_info()
                 resource = self.sensor_controller.detect_resource()
