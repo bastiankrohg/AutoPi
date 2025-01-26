@@ -9,15 +9,14 @@ import math
 
 from planning import AStarPlanner
 from obstacle import ObstacleDetector
-from vision_pi import VisionPi
 from path import generate_expanding_square_path, generate_random_walk_path, generate_sine_wave_path, generate_spiral_pattern, generate_zigzag_pattern, generate_straight_line_path
-from obstacle import ObstacleDetector
-from controllers import MotorController
+from vision_pi import VisionPi
 
 if platform.system() == "Linux":
     from controllers import MotorController, SensorController, NavigationController
 else:
     from dummy import MotorController, SensorController, NavigationController
+
 
 # State Machine States
 class RoverState:
