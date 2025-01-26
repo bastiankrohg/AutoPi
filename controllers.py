@@ -1,6 +1,6 @@
+import rover
 import time
 import math
-import rover
 
 class MotorController:
     def __init__(self):
@@ -26,23 +26,61 @@ class MotorController:
     def stop(self):
         """Stops the rover's motors."""
         rover.stop()
+        
+    def Calibrate_turn_right(self) :
+            print(f"Rover turning Right at speed {speed}")
+            self.turn_right(50)
+            time.sleep(5)
+            self.stop()
+            angle= float (input ("angle parcouru par le rover :"))
+            speed_ang=angle/5                     
+            print (f"angular speed :{speed_ang}") 
+            return speed_ang
 
-    def turn(self, angle):
-            """
-            Turns the rover by the specified angle.
-
-            Parameters:
-            - angle (float): The angle in degrees. Positive for right, negative for left.
-            """
-            if angle > 0:
-                print(f"Turning right by {angle} degrees")
-                self.turn_right(min(abs(angle), 100))  # Limit max speed/angle
-            elif angle < 0:
-                print(f"Turning left by {angle} degrees")
-                self.turn_left(min(abs(angle), 100))  # Limit max speed/angle
-            time.sleep(abs(angle) / 50)  # Simulate time proportional to angle
-            self.stop()  # Ensure the rover stops after turning
+    def Calibrate_turn_left(self) :
+            print(f"Rover turning Right at speed {speed}")
+            self.turn_left(50)
+            time.sleep(5)
+            self.stop()
+            angle= float (input ("angle parcouru par le rover :"))
+            speed_ang=angle/5                     
+            print (f"angular speed :{speed_ang}") 
+            return speed_ang
+        
+    def TurnRight(self,angle,angular_speed):  
+        
+            #angle= float (input ("angle a parcourir par le rover :"))  
+            timeOFF =angle/angular_speed 
+            self.turn_right(50)
+            time.sleep(timeOFF)
+            print (f"rover has turn {angle} degrees") 
+        
+    def Turnleft(self,angle,angular_speed):  
+        
+            #angle= float (input ("angle a parcourir par le rover :"))  
+            timeOFF =angle/angular_speed 
+            self.turn_left(50)
+            time.sleep(timeOFF)
+            print (f"rover has turn {angle} degrees") 
             
+    #a voir
+    def turn(self, angle):
+        """
+        Turns the rover by the specified angle.
+        Parameters:
+        - angle (float): The angle in degrees. Positive for right, negative for left.
+        """
+        if angle > 0:
+            print(f"Turning right by {angle} degrees")
+            self.turn_right(min(abs(angle), 100))  # Limit max speed/angle
+        elif angle < 0:
+            print(f"Turning left by {angle} degrees")
+            self.turn_left(min(abs(angle), 100))  # Limit max speed/angle
+        time.sleep(abs(angle) / 50)  # Simulate time proportional to angle
+        self.stop()  # Ensure the rover stops after turning
+
+
+
 class SensorController:
     def __init__(self):
         """Initializes the sensor controller for the rover."""
@@ -76,11 +114,9 @@ class NavigationController:
     def calculate_turn_angle(self, current_position, next_waypoint):
         """
         Calculate the angle the rover needs to turn to face the next waypoint.
-
         Parameters:
         - current_position (tuple): The current (x, y) position of the rover.
         - next_waypoint (tuple): The target (x, y) position.
-
         Returns:
         - float: The angle to turn in degrees.
         """
@@ -96,7 +132,6 @@ class NavigationController:
     def drive_to_waypoint(self, current_position, next_waypoint):
         """
         Drive the rover to the next waypoint.
-
         Parameters:
         - current_position (tuple): The current (x, y) position of the rover.
         - next_waypoint (tuple): The target (x, y) position.
@@ -119,7 +154,6 @@ class NavigationController:
     def follow_path(self, current_position, path):
         """
         Follow a sequence of waypoints.
-
         Parameters:
         - current_position (tuple): The starting (x, y) position of the rover.
         - path (list): A list of waypoints [(x1, y1), (x2, y2), ...].
@@ -127,3 +161,4 @@ class NavigationController:
         for waypoint in path:
             self.drive_to_waypoint(current_position, waypoint)
             current_position = waypoint  # Update current position
+            self.motor_controller.drive_forward(50)

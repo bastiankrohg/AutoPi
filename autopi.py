@@ -4,15 +4,19 @@ import socket
 import json
 import platform
 import argparse
+import queue
+import math
 
 from planning import AStarPlanner
 from obstacle import ObstacleDetector
 from path import generate_expanding_square_path, generate_random_walk_path, generate_sine_wave_path, generate_spiral_pattern, generate_zigzag_pattern, generate_straight_line_path
+from vision_pi import VisionPi
 
 if platform.system() == "Linux":
     from controllers import MotorController, SensorController, NavigationController
 else:
     from dummy import MotorController, SensorController, NavigationController
+
 
 # State Machine States
 class RoverState:
@@ -24,7 +28,7 @@ class RoverState:
 
 # AutoPi Class for Autonomous Control
 class AutoPi:
-    def __init__(self, telemetry_ip, telemetry_port, debug_mode=False, path_type="straight_line", sim_mode=False):
+    def __init__(self, telemetry_ip, telemetry_port, debug_mode=False, path_type="straight_line",sim_mode=False):
         print("Initializing AutoPi...")
         self.state = RoverState.IDLE
         self.motor_controller = MotorController()
@@ -40,14 +44,36 @@ class AutoPi:
         self.debug_mode = debug_mode
         self.sim_mode = sim_mode
         self.heading = "N"  # Default heading is North
-
         # Path selection
-        self.path_type = path_type
-
+        self.path_type = path_type 
         # Obstacle Detector
         self.obstacle_detector = ObstacleDetector(self.sensor_controller.get_ultrasound_distance,
                                                   self.sensor_controller.detect_resource)
         self.obstacle_detector.start()
+ 
+        #set_controller
+        self.speed_angle_left=rover.Calibrate_turn_left(50)
+        self.speed_angle_right=rover.Calibrate_turn_right(50)
+        
+        # initialise obstacle_detector
+        self.obstacle_detector = ObstacleDetector(self.sensor_controller.get_ultrasound_distance, self.sensor_controller.detect_resource)
+        self.distance_obstacle = -1
+        # Message queue for VisionPi communication
+        self.message_queue = queue.Queue()
+
+        # Initialize VisionPi instance with the queue
+        self.vision = VisionPi(
+            rtsp_url="rtsp://example.com/stream",
+            path1="/home/pi/new_image.jpg",
+            path2="/home/pi/old_image.jpg",
+            path3="/home/pi/cropped_images",
+            modelpath="/home/pi/models/beer_model.tflite",
+            message_queue=self.message_queue
+        )
+
+        # Vision thread
+        self.vision_thread = threading.Thread(target=self.vision.run, daemon=True)
+        self.vision_thread.start()
 
         # Telemetry
         self.telemetry_ip = telemetry_ip
@@ -57,15 +83,53 @@ class AutoPi:
         self.telemetry_thread = threading.Thread(target=self.telemetry_loop, daemon=True)
         self.telemetry_thread.start()
         print("AutoPi initialized.")
-
+        
         # Draw initial map if in debug mode
         if self.debug_mode:
             self.display_debug_info()
 
+    def handle_messages(self):
+            """
+            Handle messages from VisionPi and ObstacleDetector.
+            """
+            # Check VisionPi messages
+            while not self.message_queue.empty():
+                message = self.message_queue.get()
+                if message["type"] == "bottle_detected":
+                    direction = message["direction"]
+                    print(f"[{datetime.now()}] AutoPi: Bottle detected. Generating path towards direction {direction:.2f}°.")
+                    self.generate_path_towards(direction)
+                    self.set_state(RoverState.PURSUING_RESOURCE)  # Transition to pursuing resource state
+
+            # Check ObstacleDetector alerts
+            if self.obstacle_detector.is_alerted():
+                print(f"[{datetime.now()}] Obstacle detected! Switching to avoiding obstacle mode.")
+                self.set_state(RoverState.AVOIDING_OBSTACLE)
+                self.distance_obstacle = self.sensor_controller.get_ultrasound_distance()
+                self.avoid_obstacle()
+                
     def set_state(self, new_state):
         with self.lock:
-            print(f"State change: {self.state} -> {new_state}")
-            self.state = new_state
+             print(f"State change: {self.state} -> {new_state}")
+             self.state = new_state
+
+    
+    def generate_path_towards(self, direction):
+        """
+        Generate a path towards the specified direction.
+        """
+        print(f"Generating path towards direction {direction:.2f}°...")
+        # Implement path generation logic here using `direction`
+       
+    def avoid_obstacle(self):
+        distance_contournement=self.distance_obstacle/math.cos(45)
+        self.rover.TurnRight(45,self.speed_angle_right)
+        self.rover.drive_forward(50) ##calibration du drive_forward à faire
+        time.sleep(5)
+        self.rover.TurnLeft(45,self.speed_angle_right)
+        self.rover.drive_forward(50)
+        time.sleep(5)
+        print(f"the rover has drive a distance {self.distance_obstacle*2} ")
 
     def telemetry_loop(self):
         print("Starting telemetry loop...")
@@ -145,6 +209,7 @@ class AutoPi:
 
             while self.current_path and self.state == RoverState.EXPLORING:
                 self.navigation_controller.follow_path(self.map_center, self.current_path)
+                self.update_map()
                 self.display_debug_info()
                 resource = self.sensor_controller.detect_resource()
                 if resource:
@@ -153,7 +218,7 @@ class AutoPi:
                     self.set_state(RoverState.PURSUING_RESOURCE)
                     return
                 time.sleep(0.5)
-
+                
     def simulation_mode(self):
         print("Entering simulation mode...")
         while self.state == RoverState.SIMULATING:
@@ -199,9 +264,13 @@ class AutoPi:
                 return
             time.sleep(0.1)
 
+
+
     def run(self):
+        self.obstacle_detector.start()
         print("Starting main control loop...")
         while True:
+            self.handle_messages()  # Check for messages from VisionPi
             if self.state == RoverState.EXPLORING:
                 self.exploration_mode()
             elif self.state == RoverState.AVOIDING_OBSTACLE:
@@ -213,6 +282,7 @@ class AutoPi:
             else:
                 print("Rover is idle.")
                 time.sleep(0.1)
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="AutoPi Rover")
@@ -226,11 +296,17 @@ if __name__ == "__main__":
 
     print("Initializing rover...")
     pi = AutoPi(TELEMETRY_IP, TELEMETRY_PORT, debug_mode=args.debug, path_type=args.path, sim_mode=args.sim)
+    pi = AutoPi(TELEMETRY_IP, TELEMETRY_PORT, debug_mode=args.debug, path_type=args.path)
 
     # Start in appropriate mode
     initial_state = RoverState.SIMULATING if args.sim else RoverState.EXPLORING
     print(f"Setting initial state to {initial_state}...")
     pi.set_state(initial_state)
+
+
+    # Start in exploring mode
+    print("Setting initial state to EXPLORING...")
+    pi.set_state(RoverState.EXPLORING)
 
     # Run the rover in a separate thread
     rover_thread = threading.Thread(target=pi.run)
@@ -239,10 +315,11 @@ if __name__ == "__main__":
     # Mocking external commands (e.g., stop rover)
     while True:
         command = input("Enter command: ")
-        if command.lower() == "stop":
+        if command.lower() == "stop":  
             print("Stopping rover...")
             pi.set_state(RoverState.IDLE)
             break
 
     rover_thread.join()
     print("Rover has stopped.")
+    
