@@ -1,4 +1,5 @@
 import rover
+import time
 
 class MotorController:
     def __init__(self):
@@ -24,6 +25,42 @@ class MotorController:
     def stop(self):
         """Stops the rover's motors."""
         rover.stop()
+        
+    def Calibrate_turn_right(self) :
+            print(f"Rover turning Right at speed {speed}")
+            self.turn_right(50)
+            time.sleep(5)
+            self.stop()
+            angle= float (input ("angle parcouru par le rover :"))
+            speed_ang=angle/5                     
+            print (f"angular speed :{speed_ang}") 
+            return speed_ang
+
+    def Calibrate_turn_left(self) :
+            print(f"Rover turning Right at speed {speed}")
+            self.turn_left(50)
+            time.sleep(5)
+            self.stop()
+            angle= float (input ("angle parcouru par le rover :"))
+            speed_ang=angle/5                     
+            print (f"angular speed :{speed_ang}") 
+            return speed_ang
+        
+    def TurnRight(self,angle,angular_speed):  
+        
+            #angle= float (input ("angle a parcourir par le rover :"))  
+            timeOFF =angle/angular_speed 
+            self.turn_right(50)
+            time.sleep(timeOFF)
+            print (f"rover has turn {angle} degrees") 
+        
+    def Turnleft(self,angle,angular_speed):  
+        
+            #angle= float (input ("angle a parcourir par le rover :"))  
+            timeOFF =angle/angular_speed 
+            self.turn_left(50)
+            time.sleep(timeOFF)
+            print (f"rover has turn {angle} degrees") 
 
 class SensorController:
     def __init__(self):
