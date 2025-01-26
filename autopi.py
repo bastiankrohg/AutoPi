@@ -24,16 +24,17 @@ class RoverState:
     EXPLORING = "Exploring"
     AVOIDING_OBSTACLE = "AvoidingObstacle"
     PURSUING_RESOURCE = "PursuingResource"
+    SIMULATING = "Simulating"
 
 # AutoPi Class for Autonomous Control
 class AutoPi:
-    def __init__(self, telemetry_ip, telemetry_port, debug_mode=False, path_type="straight_line"):
+    def __init__(self, telemetry_ip, telemetry_port, debug_mode=False, path_type="straight_line",sim_mode=False):
         print("Initializing AutoPi...")
         self.state = RoverState.IDLE
         self.motor_controller = MotorController()
         self.sensor_controller = SensorController()
-        self.navigation_controller = NavigationController()
-        self.current_path = [] #exploration Path
+        self.navigation_controller = NavigationController(motor_controller=self.motor_controller, sensor_controller=self.sensor_controller)
+        self.current_path = []  # Exploration path
         self.target_resource = None
         self.lock = threading.Lock()
         self.map_center = (0, 0)  # Rover's position in the local map
@@ -41,6 +42,7 @@ class AutoPi:
         self.obstacles = set()
         self.planner = AStarPlanner(self.grid_size)
         self.debug_mode = debug_mode
+        self.sim_mode = sim_mode
         self.heading = "N"  # Default heading is North
         # Path selection
         self.path_type = path_type 
@@ -50,7 +52,6 @@ class AutoPi:
         self.obstacle_detector.start()
  
         #set_controller
-        self.rover=MotorController()
         self.speed_angle_left=rover.Calibrate_turn_left(50)
         self.speed_angle_right=rover.Calibrate_turn_right(50)
         
@@ -216,6 +217,20 @@ class AutoPi:
                     self.set_state(RoverState.PURSUING_RESOURCE)
                     return
                 time.sleep(0.5)
+                
+    def simulation_mode(self):
+        print("Entering simulation mode...")
+        while self.state == RoverState.SIMULATING:
+            if not self.current_path:
+                self.current_path = self.generate_path()
+                print(f"Generated path for simulation: {self.current_path}")
+
+            if self.current_path:
+                next_waypoint = self.current_path.pop(0)
+                print(f"Simulating move to {next_waypoint}")
+                self.map_center = next_waypoint
+                self.display_debug_info()
+                time.sleep(1)  # Simulate movement delay
 
     def avoidance_mode(self):
         print("Entering avoidance mode...")
@@ -261,6 +276,8 @@ class AutoPi:
                 self.avoidance_mode()
             elif self.state == RoverState.PURSUING_RESOURCE:
                 self.pursuit_mode()
+            elif self.state == RoverState.SIMULATING:
+                self.simulation_mode()
             else:
                 print("Rover is idle.")
                 time.sleep(0.1)
@@ -270,13 +287,21 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="AutoPi Rover")
     parser.add_argument("--debug", action="store_true", help="Enable debug mode to display mapping grid and path planning.")
     parser.add_argument("--path", type=str, default="straight_line", help="Select path type: random_walk, spiral, zigzag, straight_line, sine_wave, expanding_square")
+    parser.add_argument("--sim", action="store_true", help="Enable simulation mode.")
     args = parser.parse_args()
 
     TELEMETRY_IP = "127.0.0.1"  # Replace with actual IP address
     TELEMETRY_PORT = 50055  # Replace with actual port
 
     print("Initializing rover...")
+    pi = AutoPi(TELEMETRY_IP, TELEMETRY_PORT, debug_mode=args.debug, path_type=args.path, sim_mode=args.sim)
     pi = AutoPi(TELEMETRY_IP, TELEMETRY_PORT, debug_mode=args.debug, path_type=args.path)
+
+    # Start in appropriate mode
+    initial_state = RoverState.SIMULATING if args.sim else RoverState.EXPLORING
+    print(f"Setting initial state to {initial_state}...")
+    pi.set_state(initial_state)
+
 
     # Start in exploring mode
     print("Setting initial state to EXPLORING...")
