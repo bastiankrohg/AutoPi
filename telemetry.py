@@ -5,6 +5,7 @@ import time
 import os
 import psutil
 import socket
+import rover
 
 
 class Telemetry:
@@ -99,8 +100,8 @@ if __name__ == "__main__":
         return {
             "position": (0, 0),
             "heading": "N",
-            "battery_level": 100,
-            "ultrasound_distance": 15,
+            "battery_level": rover.getBattery(),
+            "ultrasound_distance": rover.getDistance(),
             "state": "Idle",
             "proximity_alert": None
         }
