@@ -82,3 +82,29 @@ class Telemetry:
                 self.log_telemetry()
                 self.send_telemetry()
             time.sleep(self.transmission_interval)
+
+
+if __name__ == "__main__":
+    # Configuration
+    TELEMETRY_IP = "127.0.0.1"  # Replace with the actual IP address
+    TELEMETRY_PORT = 50055  # Replace with the actual port
+
+    # Initialize the telemetry system
+    telemetry = Telemetry(TELEMETRY_IP, TELEMETRY_PORT)
+
+    try:
+        # Start telemetry
+        telemetry.start()
+
+        # Keep running until interrupted
+        print("Press Ctrl+C to stop the telemetry system.")
+        while True:
+            time.sleep(1)
+
+    except KeyboardInterrupt:
+        print("Shutting down telemetry...")
+        telemetry.stop()
+
+    except Exception as e:
+        print(f"Unexpected error: {e}")
+        telemetry.stop()
