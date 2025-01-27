@@ -15,13 +15,15 @@ class Telemetry:
         """
         self.telemetry_ip = telemetry_ip
         self.telemetry_port = telemetry_port
-        self.log_file = log_file
         self.transmission_interval = transmission_interval
 
-        # Logging configuration
+        # Log file path (ensure it's a valid string or path)
+        self.log_file = "telemetry.log"
+
+        # Set up logging
         self.logger = logging.getLogger("TelemetryLogger")
         self.logger.setLevel(logging.INFO)
-        file_handler = logging.FileHandler(self.log_file)
+        file_handler = logging.FileHandler(self.log_file)  # Ensure log_file is a string
         file_handler.setFormatter(logging.Formatter('%(message)s'))
         self.logger.addHandler(file_handler)
 

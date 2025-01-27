@@ -7,6 +7,7 @@ import argparse
 
 from planning import AStarPlanner
 from obstacle import ObstacleDetector
+from telemetry import Telemetry
 from path import generate_expanding_square_path, generate_random_walk_path, generate_sine_wave_path, generate_spiral_pattern, generate_zigzag_pattern, generate_straight_line_path
 
 if platform.system() == "Linux":
@@ -22,7 +23,6 @@ class RoverState:
     PURSUING_RESOURCE = "PursuingResource"
     SIMULATING = "Simulating"
 
-# AutoPi Class for Autonomous Control
 class AutoPi:
     def __init__(self, telemetry_ip, telemetry_port, debug_mode=False, path_type="straight_line", sim_mode=False):
         print("Initializing AutoPi...")
@@ -50,12 +50,8 @@ class AutoPi:
         self.obstacle_detector.start()
 
         # Telemetry
-        self.telemetry_ip = telemetry_ip
-        self.telemetry_port = telemetry_port
-        self.telemetry_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        self.telemetry_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        self.telemetry_thread = threading.Thread(target=self.telemetry_loop, daemon=True)
-        self.telemetry_thread.start()
+        self.telemetry = Telemetry(telemetry_ip, telemetry_port, self.get_telemetry_data)
+        self.telemetry.start()
         print("AutoPi initialized.")
 
         # Draw initial map if in debug mode
@@ -67,21 +63,37 @@ class AutoPi:
             print(f"State change: {self.state} -> {new_state}")
             self.state = new_state
 
-    def telemetry_loop(self):
-        print("Starting telemetry loop...")
-        while True:
-            proximity_alert = self.obstacle_detector.get_alert_source() if self.obstacle_detector.is_alerted() else None
-            telemetry_data = {
-                "position": self.map_center,
-                "heading": self.heading,
-                "battery_level": self.sensor_controller.get_battery_level(),
-                "ultrasound_distance": self.sensor_controller.get_ultrasound_distance(),
-                "state": self.state,  # Add current state to telemetry
-                "proximity_alert": proximity_alert  # Add proximity indicator
-            }
-            print(f"Telemetry data: {telemetry_data}")
-            self.telemetry_socket.sendto(json.dumps(telemetry_data).encode("utf-8"), (self.telemetry_ip, self.telemetry_port))
-            time.sleep(1)  # Send updates every second
+    def get_telemetry_data(self):
+        """Prepares telemetry data to be sent."""
+        proximity_alert = self.obstacle_detector.get_alert_source() if self.obstacle_detector.is_alerted() else None
+        telemetry_data = {
+            "position": self.map_center,
+            "heading": self.heading,
+            "battery_level": self.sensor_controller.get_battery_level(),
+            "ultrasound_distance": self.sensor_controller.get_ultrasound_distance(),
+            "state": self.state,  # Add current state to telemetry
+            "proximity_alert": proximity_alert  # Add proximity indicator
+        }
+        return telemetry_data
+
+    def display_debug_info(self):
+        if self.debug_mode:
+            print("Local Map:")
+            map_offset = self.grid_size // 2
+            for y in range(-map_offset, map_offset):
+                row = ""
+                for x in range(-map_offset, map_offset):
+                    map_pos = (self.map_center[0] + x, self.map_center[1] + y)
+                    if map_pos in self.obstacles:
+                        row += "X "
+                    elif map_pos == self.map_center:
+                        row += "R "
+                    elif map_pos in self.current_path:
+                        row += "* "
+                    else:
+                        row += ". "
+                print(row)
+            print(f"Current Path: {self.current_path}")
 
     def update_map(self):
         print("Updating map...")
