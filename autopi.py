@@ -64,17 +64,17 @@ class AutoPi:
             self.state = new_state
 
     def get_telemetry_data(self):
-        """Prepares telemetry data to be sent."""
+        """Gathers telemetry data from the rover."""
         proximity_alert = self.obstacle_detector.get_alert_source() if self.obstacle_detector.is_alerted() else None
-        telemetry_data = {
+        return {
             "position": self.map_center,
             "heading": self.heading,
             "battery_level": self.sensor_controller.get_battery_level(),
-            "ultrasound_distance": self.sensor_controller.get_ultrasound_distance(),
-            "state": self.state,  # Add current state to telemetry
-            "proximity_alert": proximity_alert  # Add proximity indicator
+            "ultrasound_distance": self.sensor_controller.get_distance(),
+            "state": self.state,
+            "proximity_alert": proximity_alert,
+            "system_metrics": self.telemetry.get_system_state()
         }
-        return telemetry_data
 
     def display_debug_info(self):
         if self.debug_mode:
