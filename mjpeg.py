@@ -3,7 +3,7 @@ import time
 import threading
 import http.server
 from http import HTTPStatus
-#from picamera2 import Picamera2
+from picamera2 import Picamera2
 from PIL import Image
 
 class MJPEGStreamHandler(http.server.BaseHTTPRequestHandler):
@@ -51,12 +51,12 @@ def start_camera_stream(server):
     try:
         while True:
             image_array = picam2.capture_array()
-            image = Image.fromarray(image_array)
+            image = Image.fromarray(image_array).rotate(270, expand=True)
             buffer = io.BytesIO()
             image.save(buffer, format="JPEG")
             server.update_frame(buffer.getvalue())
 
-            time.sleep(0.1)  # Adjust frame rate
+            time.sleep(0.5)  # Adjust frame rate
     except KeyboardInterrupt:
         print("Stopping camera stream...")
     finally:
