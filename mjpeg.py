@@ -11,6 +11,9 @@ class MJPEGStreamHandler(http.server.BaseHTTPRequestHandler):
         if self.path == '/stream':
             self.send_response(HTTPStatus.OK)
             self.send_header('Content-type', 'multipart/x-mixed-replace; boundary=frame')
+            self.send_header("Cache-Control", "no-store, no-cache, must-revalidate, private")
+            self.send_header("Pragma", "no-cache")
+            self.send_header("Expires", "0")
             self.end_headers()
 
             try:
