@@ -1,116 +1,119 @@
 import threading
-import time
 import logging
-import socket
 import json
+import time
 import os
 import psutil
+import socket
+
 
 class Telemetry:
-    def __init__(self, ip, port, get_data_callback, log_file="telemetry.log"):
+    def __init__(self, telemetry_ip, telemetry_port, get_telemetry_data, send_rate=1.0):
         """
-        Initialize the Telemetry module.
+        Initializes the Telemetry object.
 
-        :param ip: The IP address to send telemetry data to.
-        :param port: The port to send telemetry data to.
-        :param get_data_callback: A callback function to fetch telemetry data.
-        :param log_file: Path to the log file for telemetry data.
+        Args:
+            telemetry_ip (str): IP address for telemetry data transmission.
+            telemetry_port (int): Port for telemetry data transmission.
+            get_telemetry_data (callable): Function to fetch telemetry data.
+            send_rate (float): Rate in seconds at which telemetry data is sent.
         """
-        self.ip = ip
-        self.port = port
-        self.get_data_callback = get_data_callback
-        self.log_file = log_file
-        self.telemetry_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        self.telemetry_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        self.running = False
-        self.thread = None
+        self.telemetry_ip = telemetry_ip
+        self.telemetry_port = telemetry_port
+        self.get_telemetry_data = get_telemetry_data
+        self.send_rate = send_rate
 
-        # Setup logging
+        self.log_file = "telemetry.log"
         self.logger = logging.getLogger("TelemetryLogger")
         self.logger.setLevel(logging.INFO)
         file_handler = logging.FileHandler(self.log_file)
-        file_handler.setFormatter(logging.Formatter('%(asctime)s - %(message)s'))
+        file_handler.setFormatter(logging.Formatter('%(message)s'))
         self.logger.addHandler(file_handler)
 
+        self.telemetry_socket = None
+        self.running = False
+        self.thread = None
+
     def start(self):
-        """Start the telemetry loop in a separate thread."""
+        """Starts the telemetry transmission in a separate thread."""
         if not self.running:
             self.running = True
             self.thread = threading.Thread(target=self.telemetry_loop, daemon=True)
             self.thread.start()
-            print("Telemetry loop started.")
+            print("Telemetry transmission started.")
 
     def stop(self):
-        """Stop the telemetry loop."""
+        """Stops the telemetry transmission."""
         self.running = False
         if self.thread:
             self.thread.join()
-            print("Telemetry loop stopped.")
+            print("Telemetry transmission stopped.")
 
     def telemetry_loop(self):
-        """Continuously fetch and transmit telemetry data."""
+        """Telemetry loop that sends data at the specified send rate."""
         print("Starting telemetry loop...")
+        self.telemetry_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        self.telemetry_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+
         while self.running:
-            try:
-                telemetry_data = self.get_data_callback()
-                telemetry_data.update(self.get_system_state())
-
-                # Log telemetry data
-                self.logger.info(json.dumps(telemetry_data))
-
-                # Send telemetry data
-                self.telemetry_socket.sendto(json.dumps(telemetry_data).encode("utf-8"), (self.ip, self.port))
-                print(f"Telemetry sent: {telemetry_data}")
-
-                time.sleep(1)  # Send updates every second
-            except Exception as e:
-                print(f"Error in telemetry loop: {e}")
+            telemetry_data = self.get_telemetry_data()
+            telemetry_data.update(self.get_system_state())
+            self.logger.info(json.dumps(telemetry_data))
+            self.telemetry_socket.sendto(json.dumps(telemetry_data).encode("utf-8"), (self.telemetry_ip, self.telemetry_port))
+            print(f"Telemetry sent: {telemetry_data}")
+            time.sleep(self.send_rate)
 
     def get_system_state(self):
-        """Gather system metrics."""
+        """Gathers system state metrics."""
         return {
-            "cpu_usage": psutil.cpu_percent(interval=1),
-            "memory_available": psutil.virtual_memory().available / (1024 * 1024),  # Available memory in MB
-            "memory_total": psutil.virtual_memory().total / (1024 * 1024),  # Total memory in MB
-            "disk_usage": psutil.disk_usage('/').percent,  # Disk usage percentage
-            "temperature": self.get_temperature(),  # CPU temperature in Celsius
-            "uptime": self.get_uptime(),  # System uptime in seconds
+            "cpu_usage": psutil.cpu_percent(interval=None),
+            "memory_available": psutil.virtual_memory().available / (1024 * 1024),  # MB
+            "memory_total": psutil.virtual_memory().total / (1024 * 1024),  # MB
+            "disk_usage": psutil.disk_usage('/').percent,
+            "temperature": self.get_temperature(),
+            "uptime": self.get_uptime(),
         }
 
-    def get_temperature(self):
-        """Get the CPU temperature from the Raspberry Pi."""
+    @staticmethod
+    def get_temperature():
+        """Fetches the CPU temperature."""
         try:
             with open("/sys/class/thermal/thermal_zone0/temp", "r") as f:
                 return int(f.read().strip()) / 1000.0  # Convert millidegrees to degrees
         except FileNotFoundError:
-            return "N/A"  # Temperature sensor not available
+            return "N/A"
 
-    def get_uptime(self):
-        """Calculate system uptime."""
+    @staticmethod
+    def get_uptime():
+        """Fetches the system uptime."""
         try:
             with open("/proc/uptime", "r") as f:
                 uptime_seconds = float(f.readline().split()[0])
                 return uptime_seconds
-        except Exception as e:
+        except Exception:
             return "N/A"
 
-# For standalone testing
 if __name__ == "__main__":
+
     def mock_telemetry_data():
         return {
             "position": (0, 0),
             "heading": "N",
             "battery_level": 100,
-            "ultrasound_distance": 50,
+            "ultrasound_distance": 15,
             "state": "Idle",
             "proximity_alert": None
         }
 
-    telemetry = Telemetry(ip="127.0.0.1", port=50055, get_data_callback=mock_telemetry_data)
+    TELEMETRY_IP = "127.0.0.1"
+    TELEMETRY_PORT = 50055
+    SEND_RATE = 2.0  # Send telemetry every 2 seconds
+
+    telemetry = Telemetry(TELEMETRY_IP, TELEMETRY_PORT, mock_telemetry_data, send_rate=SEND_RATE)
     telemetry.start()
 
     try:
         while True:
-            time.sleep(0.1)
+            time.sleep(1)
     except KeyboardInterrupt:
         telemetry.stop()
