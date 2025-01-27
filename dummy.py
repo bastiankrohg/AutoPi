@@ -30,8 +30,8 @@ class NavigationController:
         self.sensor_controller = sensor_controller
         self.current_heading = 0  # Heading in degrees, 0 = North
 
-    def follow_path(self, path):
-        print(f"[Mock] Following path: {path}")
+    def follow_path(self, map_center, path):
+        print(f"[Mock] Center: {map_center}, Following path: {path}")
 
     def navigate_around_obstacle(self):
         print("[Mock] Navigating around obstacle")
