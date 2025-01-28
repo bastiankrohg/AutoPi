@@ -59,7 +59,7 @@ class SensorController:
         print("SensorController initialized.")
 
 
-    def get_distance(self):
+    def get_ultrasound_distance(self):
         """Fetches the distance from the ultrasonic sensor."""
         return self.rover.getDistance()
 
@@ -77,7 +77,7 @@ class NavigationController:
 
     def navigate_around_obstacle(self):
         """Example method for avoiding obstacles."""
-        distance = self.sensor_controller.get_distance()
+        distance = self.sensor_controller.get_ultrasound_distance()
         if distance < 20:
             print("Obstacle detected! Navigating around it...")
             self.motor_controller.stop()

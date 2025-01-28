@@ -74,7 +74,7 @@ class AutoPi:
             "position": self.map_center,
             "heading": self.heading,
             "battery_level": self.sensor_controller.get_battery_level(),
-            "ultrasound_distance": self.sensor_controller.get_distance(),
+            "ultrasound_distance": self.sensor_controller.get_ultrasound_distance(),
             "state": self.state,
             "proximity_alert": proximity_alert,
             "system_metrics": self.telemetry.get_system_state()
