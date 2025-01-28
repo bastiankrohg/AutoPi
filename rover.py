@@ -139,7 +139,7 @@ def init(brightness, PiBit=False):
         leds = Adafruit_NeoPixel(numPixels, 18, 800000, 5, False, _brightness)
         leds.begin()
 
-    pca9685.init()
+    PCA9685.init()
 
     if PiBit:
         t = L1
