@@ -100,7 +100,7 @@ if __name__ == "__main__":
         return {
             "position": (0, 0),
             "heading": "N",
-            "battery_level": rover.getBattery(),
+            "battery_level": 100,
             "ultrasound_distance": rover.getDistance(),
             "state": "Idle",
             "proximity_alert": None

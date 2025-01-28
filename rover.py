@@ -78,7 +78,7 @@
 # Import all necessary libraries
 import RPi.GPIO as GPIO, sys, time, os
 from rpi_ws281x import *
-import pca9685
+from adafruit_pca9685 import PCA9685
 import smbus
 
 # Define Model
@@ -139,7 +139,7 @@ def init(brightness, PiBit=False):
         leds = Adafruit_NeoPixel(numPixels, 18, 800000, 5, False, _brightness)
         leds.begin()
 
-    pca9685.init()
+    PCA9685.init()
 
     if PiBit:
         t = L1
