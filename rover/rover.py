@@ -78,7 +78,8 @@
 # Import all necessary libraries
 import RPi.GPIO as GPIO, sys, time, os
 from rpi_ws281x import *
-from . import pca9685
+#from . import pca9685
+import rover.pca9685
 import smbus
 
 # Define Model
@@ -139,7 +140,7 @@ def init(brightness, PiBit=False):
         leds = Adafruit_NeoPixel(numPixels, 18, 800000, 5, False, _brightness)
         leds.begin()
 
-    pca9685.init()
+    rover.pca9685.init()
 
     if PiBit:
         t = L1
@@ -502,11 +503,11 @@ def wheel(pos):
 # Servo Functions
 
 def setServo(Servo, Degrees):
-    pca9685.setServo(Servo, Degrees + offsets[Servo])
+    rover.pca9685.setServo(Servo, Degrees + offsets[Servo])
 
 def stopServos():
     for i in range(16):
-        pca9685.stopServo(i)
+        rover.pca9685.stopServo(i)
     
 # End of Servo Functions
 #======================================================================

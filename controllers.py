@@ -35,6 +35,10 @@ class MotorController:
         """Stops the rover's motors."""
         rover.stop()
 
+    def cleanup(self):
+        """Runs cleanup by stopping rover and cleaning gpio"""
+        rover.cleanup()
+
     def turn(self, angle):
             """
             Turns the rover by the specified angle.
