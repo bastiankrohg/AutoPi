@@ -5,7 +5,7 @@ import time
 import os
 import psutil
 import socket
-import rover
+import rover.rover
 
 
 class Telemetry:

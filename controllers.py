@@ -1,6 +1,6 @@
 import time
 import math
-import rover
+import rover.rover
 
 class MotorController:
     def __init__(self):
