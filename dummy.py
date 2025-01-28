@@ -24,8 +24,14 @@ class SensorController:
         return None
 
 class NavigationController:
-    def follow_path(self, path):
-        print(f"[Mock] Following path: {path}")
+    def __init__(self, motor_controller, sensor_controller):
+        """Initializes the navigation controller with motor and sensor controllers."""
+        self.motor_controller = motor_controller
+        self.sensor_controller = sensor_controller
+        self.current_heading = 0  # Heading in degrees, 0 = North
+
+    def follow_path(self, map_center, path):
+        print(f"[Mock] Center: {map_center}, Following path: {path}")
 
     def navigate_around_obstacle(self):
         print("[Mock] Navigating around obstacle")

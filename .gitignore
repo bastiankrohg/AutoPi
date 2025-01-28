@@ -1,0 +1,4 @@
+__pycache__/
+macenv/*
+telemetry.log
+test_mjpeg.py

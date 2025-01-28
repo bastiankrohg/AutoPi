@@ -7,6 +7,7 @@ import argparse
 
 from planning import AStarPlanner
 from obstacle import ObstacleDetector
+from telemetry import Telemetry
 from path import generate_expanding_square_path, generate_random_walk_path, generate_sine_wave_path, generate_spiral_pattern, generate_zigzag_pattern, generate_straight_line_path
 
 if platform.system() == "Linux":
@@ -20,15 +21,15 @@ class RoverState:
     EXPLORING = "Exploring"
     AVOIDING_OBSTACLE = "AvoidingObstacle"
     PURSUING_RESOURCE = "PursuingResource"
+    SIMULATING = "Simulating"
 
-# AutoPi Class for Autonomous Control
 class AutoPi:
-    def __init__(self, telemetry_ip, telemetry_port, debug_mode=False, path_type="straight_line"):
+    def __init__(self, telemetry_ip, telemetry_port, debug_mode=False, path_type="straight_line", sim_mode=False):
         print("Initializing AutoPi...")
         self.state = RoverState.IDLE
         self.motor_controller = MotorController()
         self.sensor_controller = SensorController()
-        self.navigation_controller = NavigationController()
+        self.navigation_controller = NavigationController(motor_controller=self.motor_controller, sensor_controller=self.sensor_controller)
         self.current_path = []  # Exploration path
         self.target_resource = None
         self.lock = threading.Lock()
@@ -37,6 +38,7 @@ class AutoPi:
         self.obstacles = set()
         self.planner = AStarPlanner(self.grid_size)
         self.debug_mode = debug_mode
+        self.sim_mode = sim_mode
         self.heading = "N"  # Default heading is North
 
         # Path selection
@@ -48,12 +50,8 @@ class AutoPi:
         self.obstacle_detector.start()
 
         # Telemetry
-        self.telemetry_ip = telemetry_ip
-        self.telemetry_port = telemetry_port
-        self.telemetry_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        self.telemetry_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        self.telemetry_thread = threading.Thread(target=self.telemetry_loop, daemon=True)
-        self.telemetry_thread.start()
+        self.telemetry = Telemetry(telemetry_ip, telemetry_port, self.get_telemetry_data)
+        self.telemetry.start()
         print("AutoPi initialized.")
 
         # Draw initial map if in debug mode
@@ -65,21 +63,37 @@ class AutoPi:
             print(f"State change: {self.state} -> {new_state}")
             self.state = new_state
 
-    def telemetry_loop(self):
-        print("Starting telemetry loop...")
-        while True:
-            proximity_alert = self.obstacle_detector.get_alert_source() if self.obstacle_detector.is_alerted() else None
-            telemetry_data = {
-                "position": self.map_center,
-                "heading": self.heading,
-                "battery_level": self.sensor_controller.get_battery_level(),
-                "ultrasound_distance": self.sensor_controller.get_ultrasound_distance(),
-                "state": self.state,  # Add current state to telemetry
-                "proximity_alert": proximity_alert  # Add proximity indicator
-            }
-            print(f"Telemetry data: {telemetry_data}")
-            self.telemetry_socket.sendto(json.dumps(telemetry_data).encode("utf-8"), (self.telemetry_ip, self.telemetry_port))
-            time.sleep(1)  # Send updates every second
+    def get_telemetry_data(self):
+        """Gathers telemetry data from the rover."""
+        proximity_alert = self.obstacle_detector.get_alert_source() if self.obstacle_detector.is_alerted() else None
+        return {
+            "position": self.map_center,
+            "heading": self.heading,
+            "battery_level": self.sensor_controller.get_battery_level(),
+            "ultrasound_distance": self.sensor_controller.get_distance(),
+            "state": self.state,
+            "proximity_alert": proximity_alert,
+            "system_metrics": self.telemetry.get_system_state()
+        }
+
+    def display_debug_info(self):
+        if self.debug_mode:
+            print("Local Map:")
+            map_offset = self.grid_size // 2
+            for y in range(-map_offset, map_offset):
+                row = ""
+                for x in range(-map_offset, map_offset):
+                    map_pos = (self.map_center[0] + x, self.map_center[1] + y)
+                    if map_pos in self.obstacles:
+                        row += "X "
+                    elif map_pos == self.map_center:
+                        row += "R "
+                    elif map_pos in self.current_path:
+                        row += "* "
+                    else:
+                        row += ". "
+                print(row)
+            print(f"Current Path: {self.current_path}")
 
     def update_map(self):
         print("Updating map...")
@@ -142,7 +156,7 @@ class AutoPi:
             print(f"Generated path: {self.current_path}")
 
             while self.current_path and self.state == RoverState.EXPLORING:
-                self.update_map()
+                self.navigation_controller.follow_path(self.map_center, self.current_path)
                 self.display_debug_info()
                 resource = self.sensor_controller.detect_resource()
                 if resource:
@@ -151,6 +165,20 @@ class AutoPi:
                     self.set_state(RoverState.PURSUING_RESOURCE)
                     return
                 time.sleep(0.5)
+
+    def simulation_mode(self):
+        print("Entering simulation mode...")
+        while self.state == RoverState.SIMULATING:
+            if not self.current_path:
+                self.current_path = self.generate_path()
+                print(f"Generated path for simulation: {self.current_path}")
+
+            if self.current_path:
+                next_waypoint = self.current_path.pop(0)
+                print(f"Simulating move to {next_waypoint}")
+                self.map_center = next_waypoint
+                self.display_debug_info()
+                time.sleep(1)  # Simulate movement delay
 
     def avoidance_mode(self):
         print("Entering avoidance mode...")
@@ -192,6 +220,8 @@ class AutoPi:
                 self.avoidance_mode()
             elif self.state == RoverState.PURSUING_RESOURCE:
                 self.pursuit_mode()
+            elif self.state == RoverState.SIMULATING:
+                self.simulation_mode()
             else:
                 print("Rover is idle.")
                 time.sleep(0.1)
@@ -200,17 +230,19 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="AutoPi Rover")
     parser.add_argument("--debug", action="store_true", help="Enable debug mode to display mapping grid and path planning.")
     parser.add_argument("--path", type=str, default="straight_line", help="Select path type: random_walk, spiral, zigzag, straight_line, sine_wave, expanding_square")
+    parser.add_argument("--sim", action="store_true", help="Enable simulation mode.")
     args = parser.parse_args()
 
     TELEMETRY_IP = "127.0.0.1"  # Replace with actual IP address
     TELEMETRY_PORT = 50055  # Replace with actual port
 
     print("Initializing rover...")
-    pi = AutoPi(TELEMETRY_IP, TELEMETRY_PORT, debug_mode=args.debug, path_type=args.path)
+    pi = AutoPi(TELEMETRY_IP, TELEMETRY_PORT, debug_mode=args.debug, path_type=args.path, sim_mode=args.sim)
 
-    # Start in exploring mode
-    print("Setting initial state to EXPLORING...")
-    pi.set_state(RoverState.EXPLORING)
+    # Start in appropriate mode
+    initial_state = RoverState.SIMULATING if args.sim else RoverState.EXPLORING
+    print(f"Setting initial state to {initial_state}...")
+    pi.set_state(initial_state)
 
     # Run the rover in a separate thread
     rover_thread = threading.Thread(target=pi.run)
