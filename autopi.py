@@ -49,8 +49,7 @@ class AutoPi:
         self.path_type = path_type
 
         # Obstacle Detector
-        self.obstacle_detector = ObstacleDetector(self.sensor_controller.get_ultrasound_distance,
-                                                  self.sensor_controller.detect_resource)
+        self.obstacle_detector = ObstacleDetector(self.sensor_controller.get_ultrasound_distance)
         self.obstacle_detector.start()
 
         # Telemetry

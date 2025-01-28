@@ -58,7 +58,6 @@ class SensorController:
         self.rover = rover
         print("SensorController initialized.")
 
-
     def get_ultrasound_distance(self):
         """Fetches the distance from the ultrasonic sensor."""
         return self.rover.getDistance()
