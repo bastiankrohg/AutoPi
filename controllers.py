@@ -11,30 +11,29 @@ class RoverHardware:
         print("RoverHardware initialized.")
 
 class MotorController:
-    def __init__(self, rover):
+    def __init__(self, rover=None):
         """Initializes the motor controller using the shared rover hardware."""
-        self.rover = rover
         print("MotorController initialized.")
 
     def drive_forward(self, speed):
         """Drives the rover forward at a specified speed."""
-        self.rover.forward(speed)
+        rover.forward(speed)
 
     def drive_backward(self, speed):
         """Drives the rover backward at a specified speed."""
-        self.rover.reverse(speed)
+        rover.reverse(speed)
 
     def turn_left(self, speed):
         """Turns the rover left by spinning the wheels in opposite directions."""
-        self.rover.spinLeft(speed)
+        rover.spinLeft(speed)
 
     def turn_right(self, speed):
         """Turns the rover right by spinning the wheels in opposite directions."""
-        self.rover.spinRight(speed)
+        rover.spinRight(speed)
 
     def stop(self):
         """Stops the rover's motors."""
-        self.rover.stop()
+        rover.stop()
 
     def turn(self, angle):
             """
@@ -53,14 +52,13 @@ class MotorController:
             self.stop()  # Ensure the rover stops after turning
             
 class SensorController:
-    def __init__(self, rover):
+    def __init__(self, rover=None):
         """Initializes the sensor controller using the shared rover hardware."""
-        self.rover = rover
         print("SensorController initialized.")
 
     def get_ultrasound_distance(self):
         """Fetches the distance from the ultrasonic sensor."""
-        return self.rover.getDistance()
+        return rover.getDistance()
 
     def get_battery_level(self):
         """Fetches the current battery level."""
