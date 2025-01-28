@@ -78,7 +78,7 @@
 # Import all necessary libraries
 import RPi.GPIO as GPIO, sys, time, os
 from rpi_ws281x import *
-import pca9685
+from adafruit_pca9685 import PCA9685 as pca9685
 import smbus
 
 # Define Model
