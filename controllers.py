@@ -5,7 +5,7 @@ import rover.rover
 class MotorController:
     def __init__(self):
         """Initializes the motor controller for the rover."""
-        rover.init(brightness=0)  # Initialize hardware
+        rover.init(0, PiBit=False)
 
     def drive_forward(self, speed):
         """Drives the rover forward at a specified speed."""
@@ -46,7 +46,7 @@ class MotorController:
 class SensorController:
     def __init__(self):
         """Initializes the sensor controller for the rover."""
-        rover.init(brightness=0)  # Ensure hardware is initialized
+        rover.init(0, PiBit=False)
 
     def get_distance(self):
         """Fetches the distance from the ultrasonic sensor."""
