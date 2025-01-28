@@ -3,7 +3,7 @@ import time
 from queue import SimpleQueue
 
 class ObstacleDetector:
-    def __init__(self, ultrasound_sensor, camera_sensor, detection_interval=0.1):
+    def __init__(self, ultrasound_sensor, camera_sensor=None, detection_interval=0.1):
         """
         ObstacleDetector monitors the sensors and triggers an alert if an obstacle is detected.
 
