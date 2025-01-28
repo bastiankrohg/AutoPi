@@ -37,6 +37,7 @@ class MJPEGStreamServer(http.server.HTTPServer):
         super().__init__(server_address, handler_class)
         self.frame = None
         self.lock = threading.Lock()
+        self.should_stop = False
 
     def update_frame(self, frame):
         with self.lock:
@@ -45,6 +46,13 @@ class MJPEGStreamServer(http.server.HTTPServer):
     def get_frame(self):
         with self.lock:
             return self.frame
+        
+    def stop(self):
+        """Stop the MJPEG server."""
+        print("Stopping MJPEG server...")
+        self.should_stop = True
+        self.shutdown()
+        print("MJPEG server stopped.")
 
 def start_camera_stream(server):
     picam2 = Picamera2() 
@@ -52,7 +60,7 @@ def start_camera_stream(server):
     picam2.start()
 
     try:
-        while True:
+        while not server.should_stop:
             image_array = picam2.capture_array()
             image = Image.fromarray(image_array).rotate(270, expand=True)
             buffer = io.BytesIO()
@@ -65,6 +73,13 @@ def start_camera_stream(server):
     finally:
         picam2.stop()
 
+def start_mjpeg_server(server):
+    """Run the MJPEG server"""
+    try:
+        server.serve_forever()
+    except Exception as e:
+        print(f"Error in MJPEG server: {e}")
+
 def start_server():
     server_address = ('', 8080)  # Bind to all interfaces on port 8080
     server = MJPEGStreamServer(server_address, MJPEGStreamHandler)
@@ -75,10 +90,10 @@ def start_server():
 
     print("Starting MJPEG stream on http://localhost:8080/stream")
     try:
-        server.serve_forever()
+        start_mjpeg_server()
     except KeyboardInterrupt:
         print("Shutting down server...")
-        server.shutdown()
+        server.stop()
 
 if __name__ == "__main__":
     start_server()

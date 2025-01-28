@@ -8,6 +8,8 @@ import argparse
 from planning import AStarPlanner
 from obstacle import ObstacleDetector
 from telemetry import Telemetry
+from mjpeg import MJPEGStreamHandler, MJPEGStreamServer, start_mjpeg_server
+
 from path import generate_expanding_square_path, generate_random_walk_path, generate_sine_wave_path, generate_spiral_pattern, generate_zigzag_pattern, generate_straight_line_path
 
 if platform.system() == "Linux":
@@ -55,6 +57,11 @@ class AutoPi:
         # Telemetry
         self.telemetry = Telemetry(telemetry_ip, telemetry_port, self.get_telemetry_data)
         self.telemetry.start()
+
+        self.mjpeg_server = MJPEGStreamServer(('', 8080), MJPEGStreamHandler)
+        self.mjpeg_thread = threading.Thread(target=start_mjpeg_server, kwargs={"port": 8080}, daemon=True)
+        self.mjpeg_thread.start()
+
         print("AutoPi initialized.")
 
         # Draw initial map if in debug mode
@@ -245,6 +252,8 @@ class AutoPi:
         try:
             print("Stopping the rover...")
             self.motor_controller.cleanup()  # Stop the motors
+            self.telemetry.stop()
+            self.mjpeg_server.stop()
         except Exception as e:
             print(f"Error during cleanup: {e}")
 
