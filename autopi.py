@@ -11,7 +11,7 @@ from telemetry import Telemetry
 from path import generate_expanding_square_path, generate_random_walk_path, generate_sine_wave_path, generate_spiral_pattern, generate_zigzag_pattern, generate_straight_line_path
 
 if platform.system() == "Linux":
-    from controllers import MotorController, SensorController, NavigationController
+    from controllers import MotorController, SensorController, NavigationController, RoverHardware
 else:
     from dummy import MotorController, SensorController, NavigationController
 
@@ -27,9 +27,13 @@ class AutoPi:
     def __init__(self, telemetry_ip, telemetry_port, debug_mode=False, path_type="straight_line", sim_mode=False):
         print("Initializing AutoPi...")
         self.state = RoverState.IDLE
-        self.motor_controller = MotorController()
-        self.sensor_controller = SensorController()
+
+        self.rover = RoverHardware(brightness=0, PiBit=False)
+
+        self.motor_controller = MotorController(self.rover)
+        self.sensor_controller = SensorController(self.rover)
         self.navigation_controller = NavigationController(motor_controller=self.motor_controller, sensor_controller=self.sensor_controller)
+        
         self.current_path = []  # Exploration path
         self.target_resource = None
         self.lock = threading.Lock()
