@@ -1,12 +1,10 @@
-from asyncio.windows_events import NULL
+
 import signal
 import sys
 from typing import Any
 import rover
-import rover_protos.mars_rover_pb2
-import rover_protos.mars_rover_pb2_grpc
 import time
-import tensorflow.lite as tflite
+#import tensorflow.lite as tflite
 import threading
 import queue
 import cv2
@@ -15,7 +13,7 @@ import cv2
 
 
 class VisionPi:
-    def __init__(self,rtsp_url,path1,path2,path3,modelpath):
+    def __init__(self,rtsp_url,path1,path2,path3,modelpath,mode):
         self.rtsp_url= rtsp_url
         self.new_image = path1
         self.old_image = path2
@@ -24,8 +22,10 @@ class VisionPi:
         self.state = -1
         self.direction = 0.00
         self.message_queue = queue.message_queue
+        self.mode=mode     #0 - autonomy; 1 - hybride; or 2 - with coral
     
-    ## functions for the Tensorflow model preparation and utilisation   
+    ## functions for the Tensorflow model preparation and utilisation
+    """   
     def load_tflite_model(self):
         """
         Load the TensorFlow Lite model.
@@ -56,9 +56,7 @@ class VisionPi:
         output_data = interpreter.get_tensor(output_details[0]['index'])
         return output_data
 
-    ##communication between systems
-    def SendImagetoCoral(self,Image):
-        NULL
+    """
     
     ##image processing
     def compare_images(self):
@@ -143,13 +141,14 @@ class VisionPi:
     
         # Return the array of cropped image data
         return cropped_image_data
-   
-    def    
+     
     
     def process_cropped_image(self, cropped_image_data):
         """
         Process cropped images using a TensorFlow Lite model to detect bottles.
         Stops as soon as a bottle is detected and returns its position.
+        """
+        print("hello")
         """
         interpreter = self.load_tflite_model(self.modelpath)
 
@@ -174,7 +173,7 @@ class VisionPi:
         print(f"[{datetime.now()}] No beer detected in cropped images.")
         self.state=3
         return None  # Return None if no beer is found
-    
+        """
     def calcul_direction(self):
         image_width = 640 #the stream of the camera is in 640*480p
         fov=62.2 # the camera as an a vision angle of 62.2 degres
@@ -217,7 +216,7 @@ class VisionPi:
         ret, frame = cap.read()
         if not ret:
             print(f"[{datetime.now()}] Error: Unable to read frame from stream.")
-            break
+            return
 
         # Save the current frame to the actual image path
         cv2.imwrite(self.new_image, frame)
@@ -231,18 +230,19 @@ class VisionPi:
             if difference < 0.1:
                 print(f"[{datetime.now()}] Images are too similar (<10%). Skipping.")
                 self.state = 0
-            elif 0.1 <= difference <= 0.7:
+            elif 0.1 <= difference <= 0.7  or (0.1<=difference and self.mode==0):
                 print(f"[{datetime.now()}] Images are moderately different (10%-70%). Processing.")
                 self.state = 1
-                cropped_images_with_locations =VisionPi.test_bottle_detection(frame)
+                #cropped_images_with_locations =VisionPi.test_bottle_detection(frame)
                 location=VisionPi.process_cropped_image(self, cropped_images_with_locations)
                 if self.state == 3 : 
                     VisionPi.calcul_direction(location)
               
-            elif difference > 0.7:
+            elif (difference > 0.7 and self.mode==2) or (0.1<=difference and self.mode==2):
                 print(f"[{datetime.now()}] Images are highly different (>70%). Sending to Coral.")
-                SendImagetoCoral(self,frame)
                 self.state = 2
+                
+                #on attend un retour et on envoie a autopi la direction
 
         # Update the previous image
         cv2.imwrite(self.old_image, frame)
@@ -263,26 +263,28 @@ class VisionPi:
             
             """
             while True:
-                print(f"[{datetime.now()}] Starting one image processing cycle...")
-            
+                    
+                print(f" Starting one image processing cycle...")
+                """
                 # Process a single cycle
-                self.run_1_time()
+                self.run_1_time_hybrid()
 
                 # React based on the state
                 if self.state == 0:
                     print(f"[{datetime.now()}] State 0: No action required.")
-                elif self.state == 2:
-                    self.SendImagetoCoral(self.new_image)
+                    #wait until the coral get the 
                 elif self.state == 3:
-                    print(f"[{datetime.now()}] Alert: Bottle detected. Direction = {self.direction:.2f}°")
+                    print(f"[{datetime.now()}] Alert: Bottle detected. Direction = {self.direction:.2f}Â°")
                     self.message_queue.put({"type": "bottle_detected", "direction": self.direction})
+                """
 
-                # Wait for 2 seconds before repeating
-                time.sleep(2)
+                # Wait for 4 seconds before repeating
+                time.sleep(4)
+
     
 
 if __name__ == "__main__":
-    NULL
+    print("hello")
 
 
 
