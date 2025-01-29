@@ -1,14 +1,16 @@
 
 import signal
 import sys
+import os
 from typing import Any
 import rover
 import time
+import datetime
 #import tensorflow.lite as tflite
 import threading
 import queue
 import cv2
-
+import numpy as np
 
 
 
@@ -25,20 +27,16 @@ class VisionPi:
         self.mode=mode     #0 - autonomy; 1 - hybride; or 2 - with coral
     
     ## functions for the Tensorflow model preparation and utilisation
-    """   
+    """
     def load_tflite_model(self):
-        """
-        Load the TensorFlow Lite model.
-        """
+        #Load the TensorFlow Lite model.
         print(f"[{datetime.now()}] Loading TensorFlow Lite model from {self.modelpath}...")
         interpreter = tflite.Interpreter(model_path=self.modelpath)
         interpreter.allocate_tensors()
         return interpreter
 
     def run_tflite_model(self, interpreter, input_image):
-        """
-        Run inference with the TFLite model on an input image.
-        """
+        #Run inference with the TFLite model on an input image.
         input_details = interpreter.get_input_details()
         output_details = interpreter.get_output_details()
 
@@ -68,7 +66,7 @@ class VisionPi:
         gray2 = cv2.cvtColor(self.old_image, cv2.COLOR_BGR2GRAY)
 
         # Compute SSIM (Structural Similarity Index)
-        score, _ = ssim(gray1, gray2, full=True)
+        score, _ = cv2.ssim(gray1, gray2, full=True)
 
         # Calculate difference percentage
         difference = 1 - score
@@ -174,7 +172,7 @@ class VisionPi:
         self.state=3
         return None  # Return None if no beer is found
         """
-    def calcul_direction(self):
+    def calcul_direction(self, beer_position):
         image_width = 640 #the stream of the camera is in 640*480p
         fov=62.2 # the camera as an a vision angle of 62.2 degres
         x, _, w, _ = beer_position
@@ -220,7 +218,7 @@ class VisionPi:
 
         # Save the current frame to the actual image path
         cv2.imwrite(self.new_image, frame)
-        print(f"[{datetime.now()}] Saved current frame as {path2}")
+        print(f"[{datetime.now()}] Saved current frame as {self.path2}")
 
         # If there is a previous image, compare it with the current image
         if previous_image is not None:
@@ -234,9 +232,9 @@ class VisionPi:
                 print(f"[{datetime.now()}] Images are moderately different (10%-70%). Processing.")
                 self.state = 1
                 #cropped_images_with_locations =VisionPi.test_bottle_detection(frame)
-                location=VisionPi.process_cropped_image(self, cropped_images_with_locations)
-                if self.state == 3 : 
-                    VisionPi.calcul_direction(location)
+                #location=VisionPi.process_cropped_image(self, cropped_images_with_locations)
+                #if self.state == 3 : 
+                #    VisionPi.calcul_direction(location)
               
             elif (difference > 0.7 and self.mode==2) or (0.1<=difference and self.mode==2):
                 print(f"[{datetime.now()}] Images are highly different (>70%). Sending to Coral.")
@@ -247,10 +245,10 @@ class VisionPi:
         # Update the previous image
         cv2.imwrite(self.old_image, frame)
         previous_image = cv2.imread(self.new_image)
-        print(f"[{datetime.now()}] Updated previous frame as {path1}")
+        print(f"[{datetime.now()}] Updated previous frame as {self.path1}")
 
         # Wait for the specified interval before capturing the next frame
-        time.sleep(interval)
+        time.sleep(self.interval)
 
         # Release the stream
         cap.release()
