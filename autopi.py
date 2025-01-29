@@ -14,7 +14,14 @@ from planning import AStarPlanner
 from telemetry import Telemetry
 from mjpeg import MJPEGStreamHandler, MJPEGStreamServer, start_mjpeg_server
 
-from path import generate_expanding_square_path, generate_random_walk_path, generate_sine_wave_path, generate_spiral_pattern, generate_zigzag_pattern, generate_straight_line_path
+from path import (
+    generate_expanding_square_path, 
+    generate_random_walk_path, 
+    generate_sine_wave_path, 
+    generate_spiral_pattern, 
+    generate_zigzag_pattern, 
+    generate_straight_line_path
+)
 from vision_pi import VisionPi
 
 if platform.system() == "Linux":
