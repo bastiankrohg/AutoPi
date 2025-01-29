@@ -4,7 +4,7 @@ import time
 import math
 import threading
 from queue import SimpleQueue
-from obstacle import ObstacleController
+#from obstacle import ObstacleController
 
 class RoverHardware:
     """Singleton-like class for shared rover hardware resources."""
@@ -16,9 +16,12 @@ class RoverHardware:
 
 
 class MotorController:
-    def __init__(self, rover=None):
-        """Initializes the motor controller using the shared rover hardware."""
-        print("MotorController initialized.")
+    def __init__(self):
+        """Initializes the motor controller for the rover."""
+        rover.init(brightness=0)  # Initialize hardware
+        self.angular_speed_right=0.0
+        self.angular_speed_left=0.0
+        self.forward_speed=0.0
 
     def drive_forward(self, speed):
         """Drives the rover forward at a specified speed."""
@@ -61,40 +64,61 @@ class MotorController:
             self.stop()  # Ensure the rover stops after turning
                     
     def Calibrate_turn_right(self, speed) :
-            print(f"Rover turning Right at speed {speed}")
+            print(f"Rover turning Right at speed 50")
             self.turn_right(50)
-            time.sleep(5)
+            time.sleep(2)
             self.stop()
             angle= float (input ("angle parcouru par le rover :"))
             speed_ang=angle/5                     
             print (f"angular speed :{speed_ang}") 
-            return speed_ang
+            self.angular_speed_right =speed_ang
 
     def Calibrate_turn_left(self, speed) :
             print(f"Rover turning Right at speed {speed}")
             self.turn_left(50)
-            time.sleep(5)
+            time.sleep(2)
             self.stop()
             angle= float (input ("angle parcouru par le rover :"))
             speed_ang=angle/5                     
             print (f"angular speed :{speed_ang}") 
-            return speed_ang
+            self.angular_speed_left =speed_ang
+ 
+    #calibration forward rover
+    def calibration_forward(self,speed) :
+        self.drive_forward(speed)
+        time.sleep(5)
+        self.stop()
+        distance= float (input ("distance parcouru par le rover :"))
+        speed_forward=distance/3                   
+        print (f"speed :{speed_forward}") 
+        self.forward_speed = speed_forward
         
-    def TurnRight(self,angle,angular_speed):  
+        
+    def TurnRight(self):  
         
             #angle= float (input ("angle a parcourir par le rover :"))  
-            timeOFF =angle/angular_speed 
+            timeOFF =5/self.angular_speed_right if self.angular_speed_right else 1
             self.turn_right(50)
             time.sleep(timeOFF)
-            print (f"rover has turn {angle} degrees") 
+            self.stop()
+            print (f"rover has turn 5 degrees to the right") 
         
-    def Turnleft(self,angle,angular_speed):  
+    def Turnleft(self):  
         
             #angle= float (input ("angle a parcourir par le rover :"))  
-            timeOFF =angle/angular_speed 
+            timeOFF =5/self.angular_speed_left if self.angular_speed_right else 1
             self.turn_left(50)
             time.sleep(timeOFF)
-            print (f"rover has turn {angle} degrees") 
+            self.stop()
+            print (f"rover has turn 5 degrees to the left") 
+            
+    def Driveforward(self):
+            
+            timeOFF =10/self.forward_speed
+            self.drive_forward(80)
+            time.sleep(timeOFF)
+            self.stop()
+            print (f"rover has drive 10 cm ") 
             
     #a voir
     def turn(self, angle):
@@ -127,6 +151,94 @@ class SensorController:
         """Fetches the current battery level."""
         print("Battery function not available")
         return 100
+
+class ObstacleController:
+    def __init__(self, ultrasound_sensor, camera_sensor, detection_interval=0.1):
+        """
+        ObstacleDetector monitors the sensors and triggers an alert if an obstacle is detected.
+
+        Args:
+            ultrasound_sensor: A callable object/function that returns distance to nearest object.
+            camera_sensor: A callable object/function that performs object detection.
+            detection_interval: Time in seconds between sensor checks.
+        """
+        self.ultrasound_sensor = ultrasound_sensor
+        self.camera_sensor = camera_sensor
+        self.detection_interval = detection_interval
+        self.obstacle_alert = threading.Event()
+        self.queue = SimpleQueue()
+        self.running = False
+        
+        self.speed_angle_right=0.0
+        self.speed_angle_left=0.0
+        self.distance_obstacle=0.0
+        
+        
+        
+
+    def _check_sensors(self):
+        """Periodically checks the sensors and signals an obstacle if necessary."""
+
+        ultrasound_distance = self.ultrasound_sensor()
+        camera_detection = self.camera_sensor()
+
+        if ultrasound_distance < 10:  # Threshold for obstacle detection in cm
+            self.queue.put(("Ultrasound detected obstacle",ultrasound_distance))
+            self.obstacle_alert.set()
+        elif camera_detection:
+            self.queue.put("Camera detected obstacle")
+            self.obstacle_alert.set()
+
+
+    def start(self):
+        """Starts the obstacle detection thread."""
+        if not self.running:
+            self.running = True
+            self.detection_thread = threading.Thread(target=self._check_sensors, daemon=True)
+            self.detection_thread.start()
+            print("ObstacleDetector started.")
+
+    def stop(self):
+        """Stops the obstacle detection thread."""
+        self.running = False
+        if hasattr(self, 'detection_thread'):
+            self.detection_thread.join()
+            print("ObstacleDetector stopped.")
+
+    def reset_alert(self):
+        """Resets the obstacle alert."""
+        self.obstacle_alert.clear()
+
+    def is_alerted(self):
+        """Checks if an obstacle alert is active."""
+        return self.obstacle_alert.is_set()
+
+    def get_alert_source(self):
+        """Returns the source of the latest obstacle alert, if any."""
+        if not self.queue.empty():
+            return self.queue.get()
+        return None
+    
+    def avoid_obstacle(self):
+        distance_contournement=self.distance_obstacle/math.cos(45)
+        self.rover.TurnRight(45,self.speed_angle_right)
+        self.rover.drive_forward(50) ##calibration du drive_forward a faire
+        time.sleep(5)
+        self.rover.TurnLeft(45,self.speed_angle_left)
+        self.rover.drive_forward(50)
+        time.sleep(5)
+        print(f"the rover has drive a distance {distance_contournement*2} ")
+        return distance_contournement*2
+        
+    def run(self) :
+        self.start()
+        while self.running: 
+            self._check_sensors()
+            #if self.is_alerted() :
+             #   alert = self.get_alert_source()
+              #  distance_parcourue=self.avoid_obstacle(alert[1])
+               # self.reset(alert)
+
 
 class NavigationController:
     def __init__(self, motor_controller, sensor_controller):

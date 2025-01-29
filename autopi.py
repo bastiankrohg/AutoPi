@@ -1,3 +1,4 @@
+from email import message
 import threading
 import time
 import datetime
@@ -9,7 +10,6 @@ import queue
 import math
 
 from planning import AStarPlanner
-from obstacle import ObstacleController
 from telemetry import Telemetry
 from mjpeg import MJPEGStreamHandler, MJPEGStreamServer, start_mjpeg_server
 
@@ -17,7 +17,7 @@ from path import generate_expanding_square_path, generate_random_walk_path, gene
 from vision_pi import VisionPi
 
 if platform.system() == "Linux":
-    from controllers import MotorController, SensorController, NavigationController, RoverHardware
+    from controllers import MotorController, SensorController, NavigationController, RoverHardware, ObstacleController
 else:
     from dummy import MotorController, SensorController, NavigationController
 
@@ -37,6 +37,7 @@ class AutoPi:
 
         self.rover = RoverHardware(brightness=0, PiBit=False)
 
+        self.current_position=[0,0]
         self.motor_controller = MotorController(self.rover)
         self.sensor_controller = SensorController(self.rover)
         self.navigation_controller = NavigationController(motor_controller=self.motor_controller, sensor_controller=self.sensor_controller)
@@ -50,7 +51,8 @@ class AutoPi:
         self.planner = AStarPlanner(self.grid_size)
         self.debug_mode = debug_mode
         self.sim_mode = sim_mode
-        self.heading = "N"  # Default heading is North
+        self.heading = 0  # Default heading is North, from 0 to 360, rover turn by 5 degrees
+        self.near_beer=0 # 0 - not near a beer 1 - near a beer
         # Path selection
         self.path_type = path_type 
         # Obstacle Detector
@@ -58,8 +60,9 @@ class AutoPi:
         self.obstacle_detector.start()
  
         #set_controller
-        self.speed_angle_left=self.rover.Calibrate_turn_left(50)
-        self.speed_angle_right=self.rover.Calibrate_turn_right(50)
+        self.speed_angle_left=self.motor_controller.Calibrate_turn_left(50)
+        self.speed_angle_right=self.motor_controller.Calibrate_turn_right(50)
+        self.speed_forward=self.motor_controller.calibration_forward(80)
         
         # initialise obstacle_detector
         self.obstacle_detector = ObstacleController(self.sensor_controller.get_ultrasound_distance, self.sensor_controller.detect_resource)
@@ -104,30 +107,24 @@ class AutoPi:
                 message = self.message_queue.get()
                 if message["type"] == "bottle_detected":
                     direction = message["direction"]
-                    print(f"[{datetime.now()}] AutoPi: Bottle detected. Generating path towards direction {direction:.2f}�.")
-                    self.generate_path_towards(direction)
-                    self.set_state(RoverState.PURSUING_RESOURCE)  # Transition to pursuing resource state
+                    print(f"[{datetime.now()}] AutoPi: Bottle detected. Generating path towards direction {direction:.2f} degrees.")
+                    #self.get_to_that_direction()
+                    self.state=RoverState.PURSUING_RESOURCE
 
-            # Check ObstacleController alerts
-            if self.obstacle_detector.is_alerted():
-                print(f"[{datetime.now()}] Obstacle detected! Switching to avoiding obstacle mode.")
-                self.set_state(RoverState.AVOIDING_OBSTACLE)
-                self.distance_obstacle = self.sensor_controller.get_ultrasound_distance()
-                self.avoid_obstacle()
+                # Check ObstacleController alerts
+                if self.obstacle_detector.is_alerted():
+                    self.near_beer=1
+                    print(f"[{datetime.now()}] Obstacle detected! Switching to avoiding obstacle mode.")
+                    #self.set_state(RoverState.AVOIDING_OBSTACLE)
+                
+                    #self.avoid_obstacle()
                 
     def set_state(self, new_state):
         with self.lock:
              print(f"State change: {self.state} -> {new_state}")
              self.state = new_state
 
-    
-    def generate_path_towards(self, direction):
-        """
-        Generate a path towards the specified direction.
-        """
-        print(f"Generating path towards direction {direction:.2f}�...")
-        # Implement path generation logic here using `direction`
-       
+        
     
 
     def telemetry_loop(self):
@@ -186,7 +183,35 @@ class AutoPi:
             self.obstacles = {(x - shift_x, y - shift_y) for (x, y) in self.obstacles}
             self.map_center = next_position
             print(f"Environment shifted to keep rover centered at {self.map_center}")
+            
 
+    def to_the_next_point(self): 
+        next_position=self.current_path.pop(0)
+        shift_x = next_position[0] - self.map_center[0]
+        shift_y = next_position[1] - self.map_center[1]
+        ang= int( math.atan(shift_y/shift_x) )
+        rotate_ang=ang-self.heading
+        number_rotations=int(abs( math.degrees(rotate_ang) /5) )
+        if (rotate_ang<0) :
+            for i in range(number_rotations): 
+                self.motor_controller.Turnleft()
+        else :
+            for i in range(number_rotations): 
+                self.motor_controller.Turnright()
+        self.heading+=math.degrees(ang) % 360
+        self.motor_controller.Driveforward()
+        self.update_map()
+    """           
+    def update_map_obstacle(self,distance):
+        print("Updating map after avoiding obstacle")
+        if self.current_path:
+            next_position = self.current_path.pop(0)
+            shift_x = next_position[0] - self.map_center[0]
+            shift_y = next_position[1] - self.map_center[1]
+            self.obstacles = {(x - shift_x, y - shift_y) for (x, y) in self.obstacles}
+            self.map_center = next_position
+            print(f"Environment shifted to keep rover centered at {self.map_center}")
+    """
     def display_debug_info(self):
         if self.debug_mode:
             print("Local Map:")
@@ -224,20 +249,17 @@ class AutoPi:
             return generate_expanding_square_path(step_size=1, num_layers=3, start_position=self.map_center)
         else:
             raise ValueError(f"Unknown path type: {self.path_type}")
+     
 
     def exploration_mode(self):
         print("Entering exploration mode...")
         while self.state == RoverState.EXPLORING:
-            if self.obstacle_detector.is_alerted():
-                print(f"Obstacle detected! Source: {self.obstacle_detector.get_alert_source()}")
-                self.obstacle_detector.reset_alert()
-                self.set_state(RoverState.AVOIDING_OBSTACLE)
-                return
-
+        
             self.current_path = self.generate_path()
             print(f"Generated path: {self.current_path}")
 
             while self.current_path and self.state == RoverState.EXPLORING:
+                self.to_the_next_point()
                 self.navigation_controller.follow_path(self.map_center, self.current_path)
                 self.display_debug_info()
                 resource = self.sensor_controller.detect_resource()
@@ -286,33 +308,41 @@ class AutoPi:
     def pursuit_mode(self):
         print("Entering pursuit mode...")
         while self.state == RoverState.PURSUING_RESOURCE:
-            if self.navigation_controller.move_to(self.target_resource):
-                print(f"Reached resource: {self.target_resource}")
-                self.target_resource = None
-                self.set_state(RoverState.EXPLORING)
-                return
-            time.sleep(0.1)
+            while self.near_beer == 0:
+                time.sleep(0.1)
+            self.motor_controller.stop()
+            self.near_a_beer 
+            self.state=RoverState.EXPLORING
+        
 
+    def start(self):
+        # Demarre les threads pour autopi et vision_pi
+        vision_thread = threading.Thread(target=self.vision_pi_run)
+        vision_thread.start()
+
+        self.autopi_run()  # Demarre la logique du chemin principal
+
+        vision_thread.join()  # Attendre que le thread de vision se termine
+        
     def run(self):
-        self.obstacle_detector.start()
         print("Starting main control loop...")
         try:
             while True:
                 if self.state == RoverState.EXPLORING:
                     self.exploration_mode()
-                elif self.state == RoverState.AVOIDING_OBSTACLE:
-                    self.avoidance_mode()
+                #elif self.state == RoverState.AVOIDING_OBSTACLE:
+                #   self.avoidance_mode()
                 elif self.state == RoverState.PURSUING_RESOURCE:
                     self.pursuit_mode()
-                elif self.state == RoverState.SIMULATING:
-                    self.simulation_mode()
+                #elif self.state == RoverState.SIMULATING:
+                #    self.simulation_mode()
                 else:
                     print("Rover is idle.")
                     time.sleep(0.1)
         except KeyboardInterrupt:
             # Fallback for unexpected interruptions
             self.cleanup()
-
+  
     def signal_handler(self, sig, frame):
         """Handle Ctrl+C signal to stop the rover and clean up resources."""
         print("Ctrl+C detected. Cleaning up...")
@@ -332,6 +362,8 @@ class AutoPi:
 
 
 
+
+
 if __name__ == "__main__":
     import signal
 
@@ -345,7 +377,7 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description="AutoPi Rover")
     parser.add_argument("--debug", action="store_true", help="Enable debug mode to display mapping grid and path planning.")
-    parser.add_argument("--path", type=str, default="straight_line", help="Select path type: random_walk, spiral, zigzag, straight_line, sine_wave, expanding_square")
+    parser.add_argument("--path", type=str, default="expanding_square", help="Select path type: random_walk, spiral, zigzag, straight_line, sine_wave, expanding_square")
     parser.add_argument("--sim", action="store_true", help="Enable simulation mode.")
     args = parser.parse_args()
 
