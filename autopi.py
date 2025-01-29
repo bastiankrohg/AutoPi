@@ -109,7 +109,7 @@ class AutoPi:
                 if message["type"] == "bottle_detected":
                     direction = message["direction"]
                     print(f"[{datetime.now()}] AutoPi: Bottle detected. Generating path towards direction {direction:.2f} degrees.")
-                    self.change_heading(direction)
+                    self.change_heading(int(direction))
                     self.state=RoverState.PURSUING_RESOURCE
 
                 # Check ObstacleController alerts
