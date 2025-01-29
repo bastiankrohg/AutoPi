@@ -94,32 +94,50 @@ class MotorController:
         self.forward_speed = speed_forward
         
         
-    def TurnRight(self):  
+    def TurnRight(self, angle):  
+    
+        #angle= float (input ("angle a parcourir par le rover :"))  
+        timeOFF =angle/self.angular_speed_right if self.angular_speed_right else 1
+        self.turn_right(50)
+        time.sleep(timeOFF)
+        self.stop()
+        print (f"rover has turn 5 degrees to the right") 
         
-            #angle= float (input ("angle a parcourir par le rover :"))  
-            timeOFF =5/self.angular_speed_right if self.angular_speed_right else 1
-            self.turn_right(50)
-            time.sleep(timeOFF)
-            self.stop()
-            print (f"rover has turn 5 degrees to the right") 
+    def TurnLeft(self, angle):  
+    
+        #angle= float (input ("angle a parcourir par le rover :"))  
+        timeOFF =angle/self.angular_speed_left if self.angular_speed_right else 1
+        self.turn_left(50)
+        time.sleep(timeOFF)
+        self.stop()
+        print (f"rover has turn 5 degrees to the left") 
+
+    def TurnRight5(self):  
         
-    def Turnleft(self):  
+        #angle= float (input ("angle a parcourir par le rover :"))  
+        timeOFF =5/self.angular_speed_right if self.angular_speed_right else 1
+        self.turn_right(50)
+        time.sleep(timeOFF)
+        self.stop()
+        print (f"rover has turn 5 degrees to the right") 
         
-            #angle= float (input ("angle a parcourir par le rover :"))  
-            timeOFF =5/self.angular_speed_left if self.angular_speed_right else 1
-            self.turn_left(50)
-            time.sleep(timeOFF)
-            self.stop()
-            print (f"rover has turn 5 degrees to the left") 
-            
+    def TurnLeft5(self):  
+    
+        #angle= float (input ("angle a parcourir par le rover :"))  
+        timeOFF =5/self.angular_speed_left if self.angular_speed_right else 1
+        self.turn_left(50)
+        time.sleep(timeOFF)
+        self.stop()
+        print (f"rover has turn 5 degrees to the left") 
+        
     def Driveforward(self):
             
-            timeOFF =10/self.forward_speed
-            self.drive_forward(80)
-            time.sleep(timeOFF)
-            self.stop()
-            print (f"rover has drive 10 cm ") 
-            
+        timeOFF =10/self.forward_speed
+        self.drive_forward(80)
+        time.sleep(timeOFF)
+        self.stop()
+        print (f"rover has drive 10 cm ") 
+        
     #a voir
     def turn(self, angle):
         """

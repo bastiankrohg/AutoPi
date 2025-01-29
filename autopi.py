@@ -109,7 +109,7 @@ class AutoPi:
                 if message["type"] == "bottle_detected":
                     direction = message["direction"]
                     print(f"[{datetime.now()}] AutoPi: Bottle detected. Generating path towards direction {direction:.2f} degrees.")
-                    #self.get_to_that_direction()
+                    self.change_heading(direction)
                     self.state=RoverState.PURSUING_RESOURCE
 
                 # Check ObstacleController alerts
@@ -124,9 +124,6 @@ class AutoPi:
         with self.lock:
              print(f"State change: {self.state} -> {new_state}")
              self.state = new_state
-
-        
-    
 
     def telemetry_loop(self):
         print("Starting telemetry loop...")
@@ -183,8 +180,40 @@ class AutoPi:
             shift_y = next_position[1] - self.map_center[1]
             self.obstacles = {(x - shift_x, y - shift_y) for (x, y) in self.obstacles}
             self.map_center = next_position
-            print(f"Environment shifted to keep rover centered at {self.map_center}")
-            
+            print(f"Environment shifted to keep rover centered at {self.map_center}")        
+
+    def change_heading(self, new_heading=None) -> int:
+        if new_heading is None:
+            print("new_heading is None! Exiting function.")
+            return self.heading
+
+        print(f"Changing heading from {self.heading}° to {new_heading}°")
+
+        current = self.heading
+        delta = new_heading - current
+
+        if delta > 0:  # Turn Right
+            print(f"Turning Right by {delta} degrees")
+            while delta > 0:
+                step = min(5, delta)  # Ensure we don't overshoot
+                self.motor_controller.TurnRight(step)
+                delta -= step
+                self.heading += step  # Increase heading
+                print(f"Updated heading: {self.heading}°")
+
+        elif delta < 0:  # Turn Left
+            print(f"Turning Left by {-delta} degrees")
+            while delta < 0:
+                step = min(5, abs(delta))
+                self.motor_controller.TurnLeft(step)
+                delta += step  # Move towards 0
+                self.heading -= step  # Decrease heading
+                print(f"Updated heading: {self.heading}°")
+
+        else:  # No change needed
+            print("Keep current heading. No turn required.")
+
+        return self.heading
 
     def to_the_next_point(self): 
         next_position=self.current_path.pop(0)
@@ -195,10 +224,10 @@ class AutoPi:
         number_rotations=int(abs( math.degrees(rotate_ang) /5) )
         if (rotate_ang<0) :
             for i in range(number_rotations): 
-                self.motor_controller.Turnleft()
+                self.motor_controller.TurnLeft(5)
         else :
             for i in range(number_rotations): 
-                self.motor_controller.Turnright()
+                self.motor_controller.TurnRight(5)
         self.heading+=math.degrees(ang) % 360
         self.motor_controller.Driveforward()
         self.update_map()
