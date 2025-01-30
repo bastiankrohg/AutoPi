@@ -395,8 +395,14 @@ class AutoPi:
         try:
             print("Stopping the rover...")
             self.motor_controller.cleanup()  # Stop the motors
+
             self.telemetry.stop()
+
             self.mjpeg_server.stop()
+            self.mjpeg_thread.join()
+
+            self.vision_thread.join()
+
         except Exception as e:
             print(f"Error during cleanup: {e}")
 
