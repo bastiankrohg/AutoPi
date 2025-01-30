@@ -85,7 +85,8 @@ class AutoPi:
         self.telemetry.start()
 
         # MJPEG thread
-        self.mjpeg_server = MJPEGStreamServer(MJPEGStreamHandler)
+        server_address = ('', 8080)  # Bind to all interfaces on port 8080
+        self.mjpeg_server = MJPEGStreamServer(server_address, MJPEGStreamHandler)
         #self.mjpeg_thread = threading.Thread(target=start_mjpeg_server, kwargs={"port": 8080}, daemon=True)
         self.mjpeg_thread = threading.Thread(target=self.mjpeg_server.start, kwargs={"port": 8080}, daemon=True)
         self.mjpeg_thread.start()
