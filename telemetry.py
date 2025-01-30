@@ -24,12 +24,16 @@ class Telemetry:
         self.get_telemetry_data = get_telemetry_data
         self.send_rate = send_rate
 
-        self.log_file = "telemetry.log"
+        # Create a separate telemetry logger
         self.logger = logging.getLogger("TelemetryLogger")
-        self.logger.setLevel(logging.INFO)
-        file_handler = logging.FileHandler(self.log_file)
-        file_handler.setFormatter(logging.Formatter('%(message)s'))
-        self.logger.addHandler(file_handler)
+        self.logger.setLevel(logging.INFO)  # Log only telemetry info
+        file_handler = logging.FileHandler("telemetry.log")
+        file_handler.setFormatter(logging.Formatter('%(asctime)s - %(message)s'))
+        # Prevent log messages from propagating to the root logger
+        self.logger.propagate = False  
+        # Clear previous handlers (prevents duplicate logs if re-initialized)
+        if not self.logger.handlers:
+            self.logger.addHandler(file_handler)
 
         self.telemetry_socket = None
         self.running = False

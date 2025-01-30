@@ -33,18 +33,19 @@ else:
 
 import logging
 
-# Configure logging
+# Configure root logger for errors
 logging.basicConfig(
     level=logging.ERROR,  # Log only errors
     format="%(asctime)s - %(levelname)s - %(message)s",
     handlers=[
-        logging.FileHandler("autopi_errors.log"),  # Save logs to file
+        logging.FileHandler("autopi_errors.log"),  # Save errors to file
         logging.StreamHandler()  # Print to console
     ]
 )
 
-# Create a logger instance
-logger = logging.getLogger(__name__)
+# Create a dedicated AutoPi logger
+logger = logging.getLogger("AutoPi")  # Use a specific name for AutoPi
+logger.setLevel(logging.ERROR)  # Log only errors
 
 # State Machine States
 class RoverState:
