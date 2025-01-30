@@ -250,6 +250,7 @@ class AutoPi:
             return
 
         next_position = self.current_path.pop(0)  # Get the next point
+        print("next position: ",next_position)
         shift_x = next_position[0] - self.map_center[0]
         shift_y = next_position[1] - self.map_center[1]
 
