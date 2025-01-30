@@ -454,7 +454,7 @@ if __name__ == "__main__":
         pi.set_state(initial_state)
 
         # Run the rover in a separate thread
-        rover_thread = threading.Thread(target=pi.run)
+        rover_thread = threading.Thread(target=pi.run, daemon=True)
         rover_thread.start()
 
         # Command loop for user input
