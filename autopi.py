@@ -74,7 +74,7 @@ class RoverState:
     SIMULATING = "Simulating"
 
 class AutoPi:
-    def __init__(self, telemetry_ip, telemetry_port, debug_mode=False, path_type="straight_line", sim_mode=False, dashboard=False):
+    def __init__(self, telemetry_ip, telemetry_port, debug_mode=False, path_type="straight_line", sim_mode=False):
         print("Initializing AutoPi...")
         self.state = RoverState.IDLE
 
@@ -94,7 +94,6 @@ class AutoPi:
         self.planner = AStarPlanner(self.grid_size)
         self.debug_mode = debug_mode
         self.sim_mode = sim_mode
-        self.dashboard = dashboard
 
         self.heading = 0  # Default heading is North, from 0 to 360, rover turn by 5 degrees
         self.near_beer=0 # 0 - not near a beer 1 - near a beer
@@ -139,10 +138,6 @@ class AutoPi:
         )
         self.vision_thread = threading.Thread(target=self.vision.start, daemon=True)
         self.vision_thread.start()
-
-        if self.dashboard:
-            self.dashboard_thread = threading.Thread(target=self.display_dashboard, daemon=True)
-            self.dashboard_thread.start()
 
         print("AutoPi initialized.")
         
@@ -443,15 +438,18 @@ class AutoPi:
     
     def display_dashboard(self):
         """Clears the terminal and displays real-time telemetry."""
-        while self.running:
-            os.system("clear")  # Clears terminal
-            print("🚀 AutoPi Rover Dashboard\n")
-            print(f"📍 Position: {self.current_position}")
-            print(f"🧭 Heading: {self.heading}°")
-            print(f"📡 Ultrasound Distance: {self.sensor_controller.last_ultrasound} m\n")
-            print(f"📍 Path History: {self.current_path}")  # Show last 5 waypoints
-            print("Press Ctrl+C to stop AutoPi.")
-            time.sleep(2)  # Refresh every 2 seconds
+        try:
+            while self.running:
+                os.system("clear")  # Clears terminal
+                print("🚀 AutoPi Rover Dashboard\n")
+                print(f"📍 Position: {self.current_position}")
+                print(f"🧭 Heading: {self.heading}°")
+                print(f"📡 Ultrasound Distance: {self.sensor_controller.last_ultrasound} m\n")
+                print(f"📍 Path History: {self.current_path}")  # Show last 5 waypoints
+                print("Press Ctrl+C to stop AutoPi.")
+                time.sleep(2)  # Refresh every 2 seconds
+        except KeyboardInterrupt:
+            self.cleanup()
 
     def start(self):
         self.autopi_run()  # Demarre la logique du chemin principal
@@ -510,11 +508,6 @@ class AutoPi:
                 self.mjpeg_server.stop()
                 print("[DEBUG] MJPEG server stopped.")
 
-            if self.dashboard:
-                print("[DEBUG] Stopping dashboard...")
-                self.dashboard_thread.join()
-                print("[DEBUG] Dashboard thread stopped.")
-
             print("All services stopped.")
 
         except Exception as e:
@@ -547,20 +540,30 @@ if __name__ == "__main__":
         rover_thread = threading.Thread(target=pi.run, daemon=True)
         rover_thread.start()
 
+        # 🚀 Run dashboard in foreground if --dashboard is set
+        if args.dashboard:
+            pi.display_dashboard()  # Blocks execution until Ctrl+C
+
+        # If not running dashboard, keep main loop alive
+        while pi.running:
+            time.sleep(1)
+
+        """
         # Command loop for user input
         while True:
             command = input("Enter command (type 'stop' to stop the rover): ").strip().lower()
             if command == "stop":
                 print("Stopping rover...")
-                pi.set_state(RoverState.IDLE)
                 break
             else:
                 print(f"Unknown command: {command}. Type 'stop' to stop the rover.")
-
+        """
     except Exception as e:
+        pi.set_state(RoverState.IDLE)
         logger.error(f"Critical error during cleanup: {e}", exc_info=True)
         print(f"An error occurred: {e}")
     finally:
+        pi.set_state(RoverState.IDLE)
         print("Cleaning up...")
         pi.cleanup()  # Ensure the rover stops before exiting
         rover_thread.join()
