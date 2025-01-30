@@ -179,7 +179,7 @@ class SensorController:
 
     def get_battery_level(self):
         """Fetches the current battery level."""
-        print("Battery function not available")
+        #print("Battery function not available")
         return 100
 
 class ObstacleController:
