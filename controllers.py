@@ -174,11 +174,13 @@ class MotorController:
 class SensorController:
     def __init__(self, rover=None):
         """Initializes the sensor controller using the shared rover hardware."""
+        self.last_ultrasound=None
         print("SensorController initialized.")
 
     def get_ultrasound_distance(self):
         """Fetches the distance from the ultrasonic sensor."""
-        return rover.getDistance()
+        self.last_ultrasound = rover.getDistance()
+        return self.last_ultrasound
 
     def get_battery_level(self):
         """Fetches the current battery level."""

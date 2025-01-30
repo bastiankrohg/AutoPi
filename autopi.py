@@ -4,6 +4,7 @@ import time
 import datetime
 import signal
 import sys
+import os
 import socket
 import json
 import platform
@@ -73,7 +74,7 @@ class RoverState:
     SIMULATING = "Simulating"
 
 class AutoPi:
-    def __init__(self, telemetry_ip, telemetry_port, debug_mode=False, path_type="straight_line", sim_mode=False):
+    def __init__(self, telemetry_ip, telemetry_port, debug_mode=False, path_type="straight_line", sim_mode=False, dashboard=False):
         print("Initializing AutoPi...")
         self.state = RoverState.IDLE
 
@@ -93,6 +94,8 @@ class AutoPi:
         self.planner = AStarPlanner(self.grid_size)
         self.debug_mode = debug_mode
         self.sim_mode = sim_mode
+        self.dashboard = dashboard
+
         self.heading = 0  # Default heading is North, from 0 to 360, rover turn by 5 degrees
         self.near_beer=0 # 0 - not near a beer 1 - near a beer
         # Path selection
@@ -137,6 +140,9 @@ class AutoPi:
         self.vision_thread = threading.Thread(target=self.vision.start, daemon=True)
         self.vision_thread.start()
 
+        if self.dashboard:
+            self.dashboard_thread = threading.Thread(target=self.display_dashboard, daemon=True)
+            self.dashboard_thread.start()
 
         print("AutoPi initialized.")
         
@@ -434,7 +440,18 @@ class AutoPi:
             self.motor_controller.stop()
             self.near_a_beer 
             self.state=RoverState.EXPLORING
-        
+    
+    def display_dashboard(self):
+        """Clears the terminal and displays real-time telemetry."""
+        while self.running:
+            os.system("clear")  # Clears terminal
+            print("🚀 AutoPi Rover Dashboard\n")
+            print(f"📍 Position: {self.current_position}")
+            print(f"🧭 Heading: {self.heading}°")
+            print(f"📡 Ultrasound Distance: {self.sensor_controller.last_ultrasound} m\n")
+            print(f"📍 Path History: {self.current_path}")  # Show last 5 waypoints
+            print("Press Ctrl+C to stop AutoPi.")
+            time.sleep(2)  # Refresh every 2 seconds
 
     def start(self):
         self.autopi_run()  # Demarre la logique du chemin principal
@@ -493,6 +510,11 @@ class AutoPi:
                 self.mjpeg_server.stop()
                 print("[DEBUG] MJPEG server stopped.")
 
+            if self.dashboard:
+                print("[DEBUG] Stopping dashboard...")
+                self.dashboard_thread.join()
+                print("[DEBUG] Dashboard thread stopped.")
+
             print("All services stopped.")
 
         except Exception as e:
@@ -505,6 +527,7 @@ if __name__ == "__main__":
     parser.add_argument("--debug", action="store_true", help="Enable debug mode to display mapping grid and path planning.")
     parser.add_argument("--path", type=str, default="expanding_square", help="Select path type: random_walk, spiral, zigzag, straight_line, sine_wave, expanding_square")
     parser.add_argument("--sim", action="store_true", help="Enable simulation mode.")
+    parser.add_argument("--dashboard", action="store_true", help="Show the real-time telemetry dashboard.")
     args = parser.parse_args()
 
     TELEMETRY_IP = "127.0.0.1"  # Replace with actual IP address
