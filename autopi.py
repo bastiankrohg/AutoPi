@@ -73,7 +73,7 @@ class AutoPi:
         self.speed_forward=self.motor_controller.calibration_forward(80)
         
         # initialise obstacle_detector
-        self.obstacle_detector = ObstacleController(self.sensor_controller.get_ultrasound_distance, self.sensor_controller.detect_resource)
+        self.obstacle_detector = ObstacleController(self.sensor_controller.get_ultrasound_distance)
         self.distance_obstacle = -1
         # Message queue for VisionPi communication
         self.message_queue = queue.Queue()
