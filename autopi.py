@@ -282,7 +282,7 @@ class AutoPi:
         print(f"Moving to {next_position}, turning {rotate_ang:.2f} degrees, then driving {distance:.2f} units forward.")
 
         # Move forward
-        self.motor_controller.DriveForward(distance)
+        self.motor_controller.DriveForward(distance) #distance in cm
 
         # Update internal map representation
         self.map_center = next_position  # Update rover's position

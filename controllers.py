@@ -142,9 +142,9 @@ class MotorController:
         self.stop()
         print (f"rover has turn 5 degrees to the left") 
         
-    def Driveforward(self):
+    def DriveForward(self, distance_cm=10):
             
-        timeOFF =10/self.forward_speed
+        timeOFF =distance_cm/self.forward_speed
         self.drive_forward(80)
         time.sleep(timeOFF)
         self.stop()
