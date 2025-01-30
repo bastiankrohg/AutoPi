@@ -1,5 +1,9 @@
 from rover import rover
 
+import logging
+# Use existing logger
+logger = logging.getLogger(__name__)
+
 import time
 import math
 import threading
@@ -10,10 +14,10 @@ class RoverHardware:
     """Singleton-like class for shared rover hardware resources."""
     def __init__(self, brightness=0, PiBit=False):
         # Initialize the rover hardware once
-        print("Initializing RoverHardware...")
+        logger.info("Initializing RoverHardware...")
         self.rover = rover
         self.rover.init(brightness=brightness, PiBit=PiBit)
-        print("RoverHardware initialized.")
+        logger.info("RoverHardware initialized.")
 
 TURN_CST = 2
 DRIVE_CST = 3
@@ -58,16 +62,16 @@ class MotorController:
             - angle (float): The angle in degrees. Positive for right, negative for left.
             """
             if angle > 0:
-                print(f"Turning right by {angle} degrees")
+                logger.info(f"Turning right by {angle} degrees")
                 self.turn_right(min(abs(angle), 100))  # Limit max speed/angle
             elif angle < 0:
-                print(f"Turning left by {angle} degrees")
+                logger.info(f"Turning left by {angle} degrees")
                 self.turn_left(min(abs(angle), 100))  # Limit max speed/angle
             time.sleep(abs(angle) / 50)  # Simulate time proportional to angle
             self.stop()  # Ensure the rover stops after turning
                     
     def Calibrate_turn_right(self, speed) :
-            print(f"Rover turning Right at speed 50")
+            logger.info(f"Rover turning Right at speed 50")
             self.turn_right(50)
             time.sleep(TURN_CST)
             self.stop()
@@ -75,13 +79,13 @@ class MotorController:
             if angle is not None:
                 speed_ang=angle/TURN_CST
             else: 
-                print("Default angular velocity: 1")
+                logger.info("Default angular velocity: 1")
                 speed_ang=1
             print (f"Angular speed: {speed_ang}") 
             self.angular_speed_right =speed_ang
 
     def Calibrate_turn_left(self, speed) :
-            print(f"Rover turning Right at speed {speed}")
+            logger.info(f"Rover turning Right at speed {speed}")
             self.turn_left(50)
             time.sleep(TURN_CST)
             self.stop()
@@ -89,7 +93,7 @@ class MotorController:
             if angle is not None:
                 speed_ang=angle/TURN_CST
             else: 
-                print("Default angular velocity: 1")
+                logger.info("Default angular velocity: 1")
                 speed_ang=1
             print (f"Angular speed: {speed_ang}") 
             self.angular_speed_left = speed_ang
@@ -103,7 +107,7 @@ class MotorController:
         if distance is not None:
             speed_forward=distance/DRIVE_CST                   
         else: 
-            print("Default speed: 1")
+            logger.info("Default speed: 1")
             speed_forward=1
         print (f"Speed :{speed_forward}") 
         self.forward_speed = speed_forward
@@ -115,7 +119,7 @@ class MotorController:
         self.turn_right(50)
         time.sleep(timeOFF)
         self.stop()
-        print (f"Rover has turned {angle} degrees to the right") 
+        logging.info(f"Rover has turned {angle} degrees to the right") 
         
     def TurnLeft(self, angle):  
     
@@ -159,12 +163,12 @@ class MotorController:
         Parameters:
         - angle (float): The angle in degrees. Positive for right, negative for left.
         """
-        print("Hello from turn()")
+        logger.info("Hello from turn()")
         if angle > 0:
-            print(f"Turning right by {angle} degrees")
+            logger.info(f"Turning right by {angle} degrees")
             self.turn_right(min(abs(angle), 100))  # Limit max speed/angle
         elif angle < 0:
-            print(f"Turning left by {angle} degrees")
+            logger.info(f"Turning left by {angle} degrees")
             self.turn_left(min(abs(angle), 100))  # Limit max speed/angle
         time.sleep(abs(angle) / 50)  # Simulate time proportional to angle
         self.stop()  # Ensure the rover stops after turning
@@ -175,7 +179,7 @@ class SensorController:
     def __init__(self, rover=None):
         """Initializes the sensor controller using the shared rover hardware."""
         self.last_ultrasound=None
-        print("SensorController initialized.")
+        logger.info("SensorController initialized.")
 
     def get_ultrasound_distance(self):
         """Fetches the distance from the ultrasonic sensor."""
@@ -184,7 +188,7 @@ class SensorController:
 
     def get_battery_level(self):
         """Fetches the current battery level."""
-        #print("Battery function not available")
+        #logger.info("Battery function not available")
         return 100
 
 class ObstacleController:
@@ -227,14 +231,14 @@ class ObstacleController:
             self.running = True
             self.detection_thread = threading.Thread(target=self._check_sensors, daemon=True)
             self.detection_thread.start()
-            print("ObstacleDetector started.")
+            logger.info("ObstacleDetector started.")
 
     def stop(self):
         """Stops the obstacle detection thread."""
         self.running = False
         if hasattr(self, 'detection_thread'):
             self.detection_thread.join()
-            print("ObstacleDetector stopped.")
+            logger.info("ObstacleDetector stopped.")
 
     def reset_alert(self):
         """Resets the obstacle alert."""
@@ -258,7 +262,7 @@ class ObstacleController:
         self.rover.TurnLeft(45,self.speed_angle_left)
         self.rover.drive_forward(50)
         time.sleep(5)
-        print(f"the rover has drive a distance {distance_contournement*2} ")
+        logger.info(f"the rover has drive a distance {distance_contournement*2} ")
         return distance_contournement*2
         
     def run(self) :
@@ -283,7 +287,7 @@ class NavigationController:
         """Example method for avoiding obstacles."""
         distance = self.sensor_controller.get_ultrasound_distance()
         if distance < 20:
-            print("Obstacle detected! Navigating around it...")
+            logger.info("Obstacle detected! Navigating around it...")
             self.motor_controller.stop()
             self.motor_controller.turn_right(50)
             time.sleep(1)
@@ -306,7 +310,7 @@ class NavigationController:
         # Normalize the angle to [-180, 180]
         turn_angle = (turn_angle + 180) % 360 - 180
         # debug
-        print(f"Current: {current_position}, Target: {next_waypoint}, Turn Angle: {turn_angle}")
+        logger.info(f"Current: {current_position}, Target: {next_waypoint}, Turn Angle: {turn_angle}")
         return turn_angle
 
     def drive_to_waypoint(self, current_position, next_waypoint):
@@ -322,13 +326,13 @@ class NavigationController:
 
         # Turn the rover
         if abs(turn_angle) > 1:  # Threshold to avoid unnecessary small turns
-            print(f"Turning {turn_angle:.2f} degrees to face waypoint {next_waypoint}")
+            logger.info(f"Turning {turn_angle:.2f} degrees to face waypoint {next_waypoint}")
             self.motor_controller.turn(turn_angle)
             self.current_heading += turn_angle
             self.current_heading %= 360  # Keep heading within [0, 360)
 
         # Drive forward
-        print(f"Driving {distance:.2f} units forward to waypoint {next_waypoint}")
+        logger.info(f"Driving {distance:.2f} units forward to waypoint {next_waypoint}")
         self.motor_controller.drive_forward(distance)
 
     def follow_path(self, current_position, path):

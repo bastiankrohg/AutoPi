@@ -33,37 +33,24 @@ else:
     from dummy import MotorController, SensorController, NavigationController
 
 import logging
+import os
 
-log_file = "rover.log"
-
-# Ensure log file exists
-if not os.path.exists(log_file):
-    with open(log_file, "w") as f:
-        f.write("Log initialized...\n")
+# Configure global logging
+LOG_FILE = "rover.log"
 
 logging.basicConfig(
-    level=logging.DEBUG,  # Capture all logs
-    format="%(asctime)s [%(levelname)s] %(message)s",
-    handlers=[
-        logging.FileHandler(log_file),
-        logging.StreamHandler(sys.stdout)  # Print to console
-    ]
+    filename=LOG_FILE,
+    filemode="w",  # Overwrite log file on each script start
+    format="%(asctime)s - %(levelname)s - %(message)s",
+    level=logging.DEBUG  # Capture INFO, DEBUG, and ERROR
 )
 
-# Redirect print() to logging.info()
-class PrintLogger:
-    def write(self, message):
-        if message.strip():  # Avoid logging empty lines
-            logging.info(message.strip())
-    def flush(self):
-        pass  # Needed for compatibility
+# Also log to console
+console_handler = logging.StreamHandler()
+console_handler.setFormatter(logging.Formatter("%(asctime)s - %(levelname)s - %(message)s"))
+logging.getLogger().addHandler(console_handler)
 
-#sys.stdout = PrintLogger()
-#sys.stderr = PrintLogger()  # Redirect errors as well
-
-# Create a dedicated AutoPi logger
-logger = logging.getLogger("AutoPi")  # Use a specific name for AutoPi
-logger.setLevel(logging.ERROR)  # Log only errors
+logging.info("🚀 AutoPi logging initialized.")
 
 # State Machine States
 class RoverState:
