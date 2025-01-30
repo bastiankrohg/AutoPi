@@ -11,14 +11,15 @@ class RoverHardware:
     def __init__(self, brightness=0, PiBit=False):
         # Initialize the rover hardware once
         print("Initializing RoverHardware...")
-        rover.init(brightness=brightness, PiBit=PiBit)
+        self.rover = rover
+        self.rover.init(brightness=brightness, PiBit=PiBit)
         print("RoverHardware initialized.")
 
 
 class MotorController:
     def __init__(self, rover=None):
         """Initializes the motor controller for the rover."""
-        rover.init(brightness=0)  # Initialize hardware
+        #rover.init(brightness=0)  # Already done when instantiating RoverHardware
         self.angular_speed_right=0.0
         self.angular_speed_left=0.0
         self.forward_speed=0.0
