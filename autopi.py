@@ -58,8 +58,8 @@ class PrintLogger:
     def flush(self):
         pass  # Needed for compatibility
 
-sys.stdout = PrintLogger()
-sys.stderr = PrintLogger()  # Redirect errors as well
+#sys.stdout = PrintLogger()
+#sys.stderr = PrintLogger()  # Redirect errors as well
 
 # Create a dedicated AutoPi logger
 logger = logging.getLogger("AutoPi")  # Use a specific name for AutoPi
@@ -75,7 +75,7 @@ class RoverState:
 
 class AutoPi:
     def __init__(self, telemetry_ip, telemetry_port, debug_mode=False, path_type="straight_line", sim_mode=False):
-        print("Initializing AutoPi...")
+        logging.info("Initializing AutoPi...")
         self.state = RoverState.IDLE
 
         self.rover = RoverHardware(brightness=0, PiBit=False)
@@ -141,7 +141,7 @@ class AutoPi:
         self.vision_thread = threading.Thread(target=self.vision.start, daemon=True)
         self.vision_thread.start()
 
-        print("AutoPi initialized.")
+        logging.info("AutoPi initialized.")
         
         # Draw initial map if in debug mode
         if self.debug_mode:
@@ -156,25 +156,25 @@ class AutoPi:
                 message = self.message_queue.get()
                 if message["type"] == "bottle_detected":
                     direction = message["direction"]
-                    print(f"[{datetime.datetime.now()}] AutoPi: Bottle detected. Generating path towards direction {direction:.2f} degrees.")
+                    logging.info(f"[{datetime.datetime.now()}] AutoPi: Bottle detected. Generating path towards direction {direction:.2f} degrees.")
                     self.change_heading(int(direction))
                     self.state=RoverState.PURSUING_RESOURCE
 
                 # Check ObstacleController alerts
                 if self.obstacle_detector.is_alerted():
                     self.near_beer=1
-                    print(f"[{datetime.datetime.now()}] Obstacle detected! Switching to avoiding obstacle mode.")
+                    logging.warning(f"[{datetime.datetime.now()}] Obstacle detected! Switching to avoiding obstacle mode.")
                     #self.set_state(RoverState.AVOIDING_OBSTACLE)
                 
                     #self.avoid_obstacle()
                 
     def set_state(self, new_state):
         with self.lock:
-             print(f"State change: {self.state} -> {new_state}")
-             self.state = new_state
+            logging.info(f"State change: {self.state} -> {new_state}")
+            self.state = new_state
 
     def telemetry_loop(self):
-        print("Starting telemetry loop...")
+        logging.info("Starting telemetry loop...")
         while not self.stop_event.is_set():
             proximity_alert = self.obstacle_detector.get_alert_source() if self.obstacle_detector.is_alerted() else None
             telemetry_data = {
@@ -185,7 +185,7 @@ class AutoPi:
                 "state": self.state,  # Add current state to telemetry
                 "proximity_alert": proximity_alert  # Add proximity indicator
             }
-            print(f"Telemetry data: {telemetry_data}")
+            logging.info(f"Telemetry data: {telemetry_data}")
             self.telemetry_socket.sendto(json.dumps(telemetry_data).encode("utf-8"), (self.telemetry_ip, self.telemetry_port))
             time.sleep(1)  # Send updates every second
     
@@ -229,7 +229,8 @@ class AutoPi:
             shift_y = next_position[1] - self.map_center[1]
             self.obstacles = {(x - shift_x, y - shift_y) for (x, y) in self.obstacles}
             self.map_center = next_position
-            print(f"Environment shifted to keep rover centered at {self.map_center}")        
+            print(f"Environment shifted to keep rover centered at {self.map_center}")
+            logging.info(f"Environment shifted to keep rover centered at {self.map_center}")        
 
     def change_heading(self, new_heading: int) -> int:
         """
@@ -251,30 +252,30 @@ class AutoPi:
 
         # Choose the shortest turn direction
         if delta_right < delta_left:
-            print(f"Turning Right by {delta_right} degrees")
+            logging.info(f"Turning Right by {delta_right} degrees")
             while delta_right > 0:
                 step = min(5, delta_right)  # Ensure we don't overshoot
                 self.motor_controller.TurnRight(step)
                 delta_right -= step
                 self.heading = (self.heading + step) % 360  # Keep within [0,360]
-                print(f"Updated heading: {self.heading}°")
+                logging.info(f"Updated heading: {self.heading}°")
                 time.sleep(0.1)  # Small delay for motor execution
 
         else:
-            print(f"Turning Left by {delta_left} degrees")
+            logging.info(f"Turning Left by {delta_left} degrees")
             while delta_left > 0:
                 step = min(5, delta_left)
                 self.motor_controller.TurnLeft(step)
                 delta_left -= step
                 self.heading = (self.heading - step) % 360  # Keep within [0,360]
-                print(f"Updated heading: {self.heading}°")
+                logging.info(f"Updated heading: {self.heading}°")
                 time.sleep(0.1)  # Small delay for motor execution
 
         return self.heading
 
     def to_the_next_point(self): 
         if not self.current_path:
-            print("No more points in the path.")
+            logging.info("No more points in the path.")
             return
 
         next_position = self.current_path.pop(0)  # Get the next point
@@ -282,7 +283,7 @@ class AutoPi:
         shift_y = next_position[1] - self.map_center[1]
 
         if shift_x == 0 and shift_y == 0:
-            print("Already at target position.")
+            logging.info("Already at target position.")
             return
 
         # Calculate target heading using atan2 (prevents division by zero)
@@ -290,7 +291,7 @@ class AutoPi:
         
         self.change_heading(target_angle)
         if self.heading==target_angle: 
-            print("heading ok: ", self.heading)
+            logging.info("heading ok: ", self.heading)
         # Update heading
         #self.heading = target_angle
 
@@ -312,7 +313,7 @@ class AutoPi:
         # Compute Euclidean distance to move forward
         distance = math.sqrt(shift_x**2 + shift_y**2) # in units
         distance_cm = 10 * distance
-        print(f"distance in units: {distance}, in cm: {distance_cm}")
+        logging.info(f"distance in units: {distance}, in cm: {distance_cm}")
         #print(f"Moving to {next_position}, turning {rotate_ang:.2f} degrees, then driving {distance:.2f} units forward.")
 
         # Move forward
@@ -320,19 +321,19 @@ class AutoPi:
 
         # Update internal map representation
         self.map_center = next_position  # Update rover's position
-        print(f"Next Position: {next_position}, New Heading: {self.heading} ")
+        logging.info(f"Next Position: {next_position}, New Heading: {self.heading} ")
         self.update_map()
 
     """           
     def update_map_obstacle(self,distance):
-        print("Updating map after avoiding obstacle")
+        logging.info("Updating map after avoiding obstacle")
         if self.current_path:
             next_position = self.current_path.pop(0)
             shift_x = next_position[0] - self.map_center[0]
             shift_y = next_position[1] - self.map_center[1]
             self.obstacles = {(x - shift_x, y - shift_y) for (x, y) in self.obstacles}
             self.map_center = next_position
-            print(f"Environment shifted to keep rover centered at {self.map_center}")
+            logging.info(f"Environment shifted to keep rover centered at {self.map_center}")
     """
     def display_debug_info(self):
         if self.debug_mode:
@@ -374,11 +375,11 @@ class AutoPi:
      
 
     def exploration_mode(self):
-        print("Entering exploration mode...")
+        logging.info("Entering exploration mode...")
         while self.state == RoverState.EXPLORING:
         
             self.current_path = self.generate_path()
-            print(f"Generated path: {self.current_path}")
+            logging.info(f"Generated path: {self.current_path}")
 
             while self.current_path and self.state == RoverState.EXPLORING:
                 self.to_the_next_point()
@@ -388,33 +389,33 @@ class AutoPi:
                 """
                 resource = self.obstacle_detector.ultrasound_sensor() # TODO Fix?
                 if resource:
-                    print(f"Something detected ahead: {resource}")
+                    logging.info(f"Something detected ahead: {resource}")
                     self.target_resource = resource
                     self.set_state(RoverState.PURSUING_RESOURCE)
                     return
                 """
                 
     def simulation_mode(self):
-        print("Entering simulation mode...")
+        logging.info("Entering simulation mode...")
         while self.state == RoverState.SIMULATING:
             if not self.current_path:
                 self.current_path = self.generate_path()
-                print(f"Generated path for simulation: {self.current_path}")
+                logging.info(f"Generated path for simulation: {self.current_path}")
 
             if self.current_path:
                 next_waypoint = self.current_path.pop(0)
-                print(f"Simulating move to {next_waypoint}")
+                logging.info(f"Simulating move to {next_waypoint}")
                 self.map_center = next_waypoint
                 self.display_debug_info()
                 time.sleep(1)  # Simulate movement delay
 
     def avoidance_mode(self):
-        print("Entering avoidance mode...")
+        logging.info("Entering avoidance mode...")
         # Replan logic to avoid obstacle and rejoin original path
         while self.state == RoverState.AVOIDING_OBSTACLE:
             avoidance_goal = (self.map_center[0] + 2, self.map_center[1] + 2)  # Example: move diagonally to avoid
             avoidance_path = self.planner.plan(self.map_center, avoidance_goal, self.obstacles)
-            print(f"Avoidance path: {avoidance_path}")
+            logging.info(f"Avoidance path: {avoidance_path}")
 
             while avoidance_path:
                 next_position = avoidance_path.pop(0)
@@ -423,14 +424,14 @@ class AutoPi:
                 self.display_debug_info()
 
                 if not self.obstacle_detector.is_alerted():
-                    print("Obstacle cleared. Returning to planned path.")
+                    logging.info("Obstacle cleared. Returning to planned path.")
                     self.set_state(RoverState.EXPLORING)
                     return
 
             time.sleep(0.5)
 
     def pursuit_mode(self):
-        print("Entering pursuit mode...")
+        logging.info("Entering pursuit mode...")
         while self.state == RoverState.PURSUING_RESOURCE:
             while self.near_beer == 0:
                 time.sleep(0.1)
@@ -457,7 +458,7 @@ class AutoPi:
         self.autopi_run()  # Demarre la logique du chemin principal
         
     def run(self):
-        print("Starting main control loop...")
+        logging.info("Starting main control loop...")
         try:
             while not self.stop_event.is_set():
                 if self.state == RoverState.EXPLORING:
@@ -469,7 +470,7 @@ class AutoPi:
                 #elif self.state == RoverState.SIMULATING:
                 #    self.simulation_mode()
                 else:
-                    print("Rover is idle.")
+                    logging.info("Rover is idle.")
                     time.sleep(0.1)
         except KeyboardInterrupt:
             # Fallback for unexpected interruptions
@@ -478,44 +479,44 @@ class AutoPi:
   
     def signal_handler(self, sig, frame):
         """Handle Ctrl+C signal to stop the rover and clean up resources."""
-        print("Ctrl+C detected. Cleaning up...")
+        logging.info("Ctrl+C detected. Cleaning up...")
         self.stop_event.set()  # Signal all threads to stop
         self.cleanup()
-        print("Cleanup complete. Exiting.")
+        logging.info("Cleanup complete. Exiting.")
         sys.exit(0)
 
     def cleanup(self):
         """Perform cleanup tasks before shutting down."""
         try:
-            print("Stopping the rover...")
+            logging.info("Stopping the rover...")
 
-            print("Stopping all services...")
+            logging.info("Stopping all services...")
             
             if self.motor_controller:
-                print("[DEBUG] Stopping motor controller...")
+                logging.info("[DEBUG] Stopping motor controller...")
                 self.motor_controller.cleanup()
-                print("[DEBUG] Motor controller stopped.")
+                logging.info("[DEBUG] Motor controller stopped.")
 
             if self.telemetry:
-                print("[DEBUG] Stopping telemetry...")
+                logging.info("[DEBUG] Stopping telemetry...")
                 self.telemetry.stop()
-                print("[DEBUG] Telemetry stopped.")
+                logging.info("[DEBUG] Telemetry stopped.")
 
             if self.vision:
-                print("[DEBUG] Stopping vision processing...")
+                logging.info("[DEBUG] Stopping vision processing...")
                 self.vision.stop()
-                print("[DEBUG] Vision processing stopped.")
+                logging.info("[DEBUG] Vision processing stopped.")
 
             if self.mjpeg_server:
-                print("[DEBUG] Stopping MJPEG server...")
+                logging.info("[DEBUG] Stopping MJPEG server...")
                 self.mjpeg_server.stop()
-                print("[DEBUG] MJPEG server stopped.")
+                logging.info("[DEBUG] MJPEG server stopped.")
 
-            print("All services stopped.")
+            logging.info("All services stopped.")
 
         except Exception as e:
             logger.error(f"Critical error during cleanup: {e}", exc_info=True)
-            print(f"Error during cleanup: {e}")
+            logging.info(f"Error during cleanup: {e}")
 
 
 if __name__ == "__main__":
@@ -529,14 +530,14 @@ if __name__ == "__main__":
     TELEMETRY_IP = "127.0.0.1"  # Replace with actual IP address
     TELEMETRY_PORT = 50055  # Replace with actual port
 
-    print("Initializing rover...")
+    logging.info("Initializing rover...")
     try:
         pi = AutoPi(TELEMETRY_IP, TELEMETRY_PORT, debug_mode=args.debug, path_type=args.path, sim_mode=args.sim)
         signal.signal(signal.SIGINT, pi.signal_handler)
 
         # Start in appropriate mode
         initial_state = RoverState.SIMULATING if args.sim else RoverState.EXPLORING
-        print(f"Setting initial state to {initial_state}...")
+        logging.info(f"Setting initial state to {initial_state}...")
         pi.set_state(initial_state)
 
         # Run the rover in a separate thread
@@ -556,18 +557,19 @@ if __name__ == "__main__":
         while not self.stop_event.is_set():
             command = input("Enter command (type 'stop' to stop the rover): ").strip().lower()
             if command == "stop":
-                print("Stopping rover...")
+                logging.info("Stopping rover...")
                 break
             else:
-                print(f"Unknown command: {command}. Type 'stop' to stop the rover.")
+                logging.info(f"Unknown command: {command}. Type 'stop' to stop the rover.")
         """
     except Exception as e:
         pi.set_state(RoverState.IDLE)
         logger.error(f"Critical error during cleanup: {e}", exc_info=True)
-        print(f"An error occurred: {e}")
+        logging.info(f"An error occurred: {e}")
     finally:
         pi.set_state(RoverState.IDLE)
-        print("Cleaning up...")
+        logging.info("Cleaning up...")
         pi.cleanup()  # Ensure the rover stops before exiting
         rover_thread.join()
         print("Rover has stopped.")
+        logging.info("Rover has stopped.")
