@@ -16,7 +16,7 @@ class RoverHardware:
 
 
 class MotorController:
-    def __init__(self):
+    def __init__(self, rover=None):
         """Initializes the motor controller for the rover."""
         rover.init(brightness=0)  # Initialize hardware
         self.angular_speed_right=0.0
