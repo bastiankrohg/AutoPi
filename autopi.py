@@ -34,6 +34,12 @@ else:
 import logging
 
 log_file = "rover.log"
+
+# Ensure log file exists
+if not os.path.exists(log_file):
+    with open(log_file, "w") as f:
+        f.write("Log initialized...\n")
+
 logging.basicConfig(
     level=logging.DEBUG,  # Capture all logs
     format="%(asctime)s [%(levelname)s] %(message)s",

@@ -3,3 +3,4 @@ macenv/*
 telemetry.log
 test_mjpeg.py
 autopi_errors.log
+rover.log
