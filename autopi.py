@@ -371,14 +371,13 @@ class AutoPi:
                 #self.navigation_controller.follow_path(self.map_center, self.current_path)
                 self.display_debug_info()
                 time.sleep(0.1)
-                """
-                resource = self.obstacle_detector.ultrasound_sensor() # TODO Fix?
+                
+                resource = self.vision.ultrasound_sensor() # TODO Fix?
                 if resource:
                     logging.info(f"Something detected ahead: {resource}")
                     self.target_resource = resource
                     self.set_state(RoverState.PURSUING_RESOURCE)
                     return
-                """
                 
     def simulation_mode(self):
         logging.info("Entering simulation mode...")
@@ -459,7 +458,7 @@ class AutoPi:
                     time.sleep(0.1)
         except KeyboardInterrupt:
             # Fallback for unexpected interruptions
-            logger.info("Running cleanup...")
+            logging.info("Running cleanup...")
             self.cleanup()
   
     def signal_handler(self, sig, frame):
