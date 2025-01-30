@@ -269,9 +269,10 @@ class AutoPi:
         target_angle = math.degrees(math.atan2(shift_y, shift_x))
         
         self.change_heading(target_angle)
-        
+        if self.heading==target_angle: 
+            print("heading ok: ", self.heading)
         # Update heading
-        self.heading = target_angle
+        #self.heading = target_angle
 
         """
         # Normalize angles to be within 0-360 range
@@ -299,8 +300,9 @@ class AutoPi:
 
         # Update internal map representation
         self.map_center = next_position  # Update rover's position
+        print(f"Next Position: {next_position}, New Heading: {self.heading} ")
         self.update_map()
-        
+
     """           
     def update_map_obstacle(self,distance):
         print("Updating map after avoiding obstacle")
