@@ -30,7 +30,7 @@ class Telemetry:
         # Create a separate telemetry logger
         self.logger = logging.getLogger("TelemetryLogger")
         self.logger.setLevel(logging.INFO)  # Log only telemetry info
-        file_handler = logging.FileHandler("telemetry.log")
+        file_handler = logging.FileHandler("telemetry.log", mode="w")
         file_handler.setFormatter(logging.Formatter('%(asctime)s - %(message)s'))
         # Prevent log messages from propagating to the root logger
         self.logger.propagate = False  
