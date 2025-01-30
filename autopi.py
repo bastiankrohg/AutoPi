@@ -37,14 +37,15 @@ import os
 
 # Define log file
 LOG_FILE = "rover.log"
+LOG_FORMAT = "%(asctime)s - %(levelname)s - %(filename)s:%(lineno)d - %(message)s"
+
 
 # Setup logging
 logging.basicConfig(
     level=logging.DEBUG,  # Log everything (INFO, DEBUG, ERROR, etc.)
-    format="%(asctime)s [%(levelname)s] - %(message)s",
+    format=LOG_FORMAT,
     handlers=[
         logging.FileHandler(LOG_FILE, mode="w"),  # Overwrites file on restart
-        logging.StreamHandler(sys.stdout),  # Sends logs to console safely
     ],
 )
 
