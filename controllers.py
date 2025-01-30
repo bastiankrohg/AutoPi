@@ -81,7 +81,7 @@ class MotorController:
             else: 
                 logger.info("Default angular velocity: 1")
                 speed_ang=1
-            print (f"Angular speed: {speed_ang}") 
+            logger.info(f"Angular speed: {speed_ang}") 
             self.angular_speed_right =speed_ang
 
     def Calibrate_turn_left(self, speed) :
@@ -95,7 +95,7 @@ class MotorController:
             else: 
                 logger.info("Default angular velocity: 1")
                 speed_ang=1
-            print (f"Angular speed: {speed_ang}") 
+            logger.info(f"Angular speed: {speed_ang}") 
             self.angular_speed_left = speed_ang
  
     #calibration forward rover
@@ -109,7 +109,7 @@ class MotorController:
         else: 
             logger.info("Default speed: 1")
             speed_forward=1
-        print (f"Speed :{speed_forward}") 
+        logger.info(f"Speed :{speed_forward}") 
         self.forward_speed = speed_forward
         
     def TurnRight(self, angle):  
@@ -128,7 +128,7 @@ class MotorController:
         self.turn_left(50)
         time.sleep(timeOFF)
         self.stop()
-        print (f"Rover has turned {angle} degrees to the left") 
+        logger.info(f"Rover has turned {angle} degrees to the left") 
 
     def TurnRight5(self):  
         
@@ -137,7 +137,7 @@ class MotorController:
         self.turn_right(50)
         time.sleep(timeOFF)
         self.stop()
-        print (f"Rover has turned 5 degrees to the right") 
+        logger.info(f"Rover has turned 5 degrees to the right") 
         
     def TurnLeft5(self):  
     
@@ -146,7 +146,7 @@ class MotorController:
         self.turn_left(50)
         time.sleep(timeOFF)
         self.stop()
-        print (f"Rover has turned 5 degrees to the left") 
+        logger.info(f"Rover has turned 5 degrees to the left") 
         
     def DriveForward(self, distance_cm=10):
             
@@ -154,7 +154,7 @@ class MotorController:
         self.drive_forward(80)
         time.sleep(timeOFF)
         self.stop()
-        print (f"Rover has driven {distance_cm} cm ") 
+        logger.info(f"Rover has driven {distance_cm} cm ") 
         
     #a voir
     def turn(self, angle):
