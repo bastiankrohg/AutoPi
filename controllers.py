@@ -119,7 +119,7 @@ class MotorController:
         self.turn_right(50)
         time.sleep(timeOFF)
         self.stop()
-        logging.info(f"Rover has turned {angle} degrees to the right") 
+        #logger.info(f"Rover has turned {angle} degrees to the right") 
         
     def TurnLeft(self, angle):  
     
@@ -128,7 +128,7 @@ class MotorController:
         self.turn_left(50)
         time.sleep(timeOFF)
         self.stop()
-        logger.info(f"Rover has turned {angle} degrees to the left") 
+        #logger.info(f"Rover has turned {angle} degrees to the left") 
 
     def TurnRight5(self):  
         
