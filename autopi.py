@@ -299,14 +299,16 @@ class AutoPi:
                 self.to_the_next_point()
                 self.navigation_controller.follow_path(self.map_center, self.current_path)
                 self.display_debug_info()
-                resource = self.sensor_controller.detect_resource()
+                """
+                resource = self.obstacle_detector.ultrasound_sensor() # TODO Fix?
                 if resource:
-                    print(f"Resource detected: {resource}")
+                    print(f"Something detected ahead: {resource}")
                     self.target_resource = resource
                     self.set_state(RoverState.PURSUING_RESOURCE)
                     return
-                time.sleep(0.5)
-
+                """
+                time.sleep(0.1)
+                
     def simulation_mode(self):
         print("Entering simulation mode...")
         while self.state == RoverState.SIMULATING:
