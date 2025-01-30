@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 
 
 class VisionPi:
-    def __init__(self,rtsp_url,modelpath="/Autopi/model.onnx",mode=0,message_queue,mjpeg_server):
+    def __init__(self,rtsp_url,modelpath="~/Autopi/model.onnx",mode=0,message_queue,mjpeg_server):
         self.mjpeg_server=mjpeg_server
         self.rtsp_url= rtsp_url
         self.new_image = None
