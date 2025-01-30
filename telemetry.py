@@ -59,13 +59,15 @@ class Telemetry:
         print("Starting telemetry loop...")
         self.telemetry_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.telemetry_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-
+        i=0
         while self.running:
             telemetry_data = self.get_telemetry_data()
             telemetry_data.update(self.get_system_state())
             self.logger.info(json.dumps(telemetry_data))
             self.telemetry_socket.sendto(json.dumps(telemetry_data).encode("utf-8"), (self.telemetry_ip, self.telemetry_port))
-            print(f"Telemetry sent: {telemetry_data}")
+            if i%20==0:
+                print(f"Telemetry sent: {telemetry_data}")
+            i+=1
             time.sleep(self.send_rate)
 
     def get_system_state(self):
