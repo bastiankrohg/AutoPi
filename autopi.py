@@ -31,6 +31,20 @@ if platform.system() == "Linux":
 else:
     from dummy import MotorController, SensorController, NavigationController
 
+import logging
+
+# Configure logging
+logging.basicConfig(
+    level=logging.ERROR,  # Log only errors
+    format="%(asctime)s - %(levelname)s - %(message)s",
+    handlers=[
+        logging.FileHandler("autopi_errors.log"),  # Save logs to file
+        logging.StreamHandler()  # Print to console
+    ]
+)
+
+# Create a logger instance
+logger = logging.getLogger(__name__)
 
 # State Machine States
 class RoverState:
@@ -408,6 +422,7 @@ class AutoPi:
                     time.sleep(0.1)
         except KeyboardInterrupt:
             # Fallback for unexpected interruptions
+            logger.info("Running cleanup...")
             self.cleanup()
   
     def signal_handler(self, sig, frame):
@@ -447,6 +462,7 @@ class AutoPi:
             print("All services stopped.")
 
         except Exception as e:
+            logger.error(f"Critical error during cleanup: {e}", exc_info=True)
             print(f"Error during cleanup: {e}")
 
 
@@ -485,6 +501,7 @@ if __name__ == "__main__":
                 print(f"Unknown command: {command}. Type 'stop' to stop the rover.")
 
     except Exception as e:
+        logger.error(f"Critical error during cleanup: {e}", exc_info=True)
         print(f"An error occurred: {e}")
     finally:
         print("Cleaning up...")
