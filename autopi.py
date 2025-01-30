@@ -33,15 +33,26 @@ else:
 
 import logging
 
-# Configure root logger for errors
+log_file = "rover.log"
 logging.basicConfig(
-    level=logging.ERROR,  # Log only errors
-    format="%(asctime)s - %(levelname)s - %(message)s",
+    level=logging.DEBUG,  # Capture all logs
+    format="%(asctime)s [%(levelname)s] %(message)s",
     handlers=[
-        logging.FileHandler("autopi_errors.log"),  # Save errors to file
-        logging.StreamHandler()  # Print to console
+        logging.FileHandler(log_file),
+        logging.StreamHandler(sys.stdout)  # Print to console
     ]
 )
+
+# Redirect print() to logging.info()
+class PrintLogger:
+    def write(self, message):
+        if message.strip():  # Avoid logging empty lines
+            logging.info(message.strip())
+    def flush(self):
+        pass  # Needed for compatibility
+
+sys.stdout = PrintLogger()
+sys.stderr = PrintLogger()  # Redirect errors as well
 
 # Create a dedicated AutoPi logger
 logger = logging.getLogger("AutoPi")  # Use a specific name for AutoPi
