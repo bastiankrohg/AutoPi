@@ -90,7 +90,7 @@ def start_server():
 
     print("Starting MJPEG stream on http://localhost:8080/stream")
     try:
-        start_mjpeg_server()
+        start_mjpeg_server(server)
     except KeyboardInterrupt:
         print("Shutting down server...")
         server.stop()
