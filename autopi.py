@@ -420,13 +420,29 @@ class AutoPi:
         """Perform cleanup tasks before shutting down."""
         try:
             print("Stopping the rover...")
-            print("Stopping all services...")
 
-            self.motor_controller.cleanup()  # Stop the motors
+            print("Stopping all services...")
             
-            self.telemetry.stop()
-            self.vision.stop()
-            self.mjpeg_server.stop()
+            if self.motor_controller:
+                print("[DEBUG] Stopping motor controller...")
+                self.motor_controller.cleanup()
+                print("[DEBUG] Motor controller stopped.")
+
+            if self.telemetry:
+                print("[DEBUG] Stopping telemetry...")
+                self.telemetry.stop()
+                print("[DEBUG] Telemetry stopped.")
+
+            if self.vision:
+                print("[DEBUG] Stopping vision processing...")
+                self.vision.stop()
+                print("[DEBUG] Vision processing stopped.")
+
+            if self.mjpeg_server:
+                print("[DEBUG] Stopping MJPEG server...")
+                self.mjpeg_server.stop()
+                print("[DEBUG] MJPEG server stopped.")
+
             print("All services stopped.")
 
         except Exception as e:
