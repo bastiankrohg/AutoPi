@@ -211,36 +211,44 @@ class AutoPi:
             self.map_center = next_position
             print(f"Environment shifted to keep rover centered at {self.map_center}")        
 
-    def change_heading(self, new_heading=None) -> int:
-        if new_heading is None:
-            print("new_heading is None! Exiting function.")
-            return self.heading
+    def change_heading(self, new_heading: int) -> int:
+        """
+        Rotates the rover towards the new heading using the shortest path.
+        Turns in 5-degree steps for smoother control.
 
-        print(f"Changing heading from {self.heading}° to {new_heading}°")
+        Args:
+            new_heading (int): The target heading in degrees (0-360).
 
-        current = self.heading
-        delta = new_heading - current
+        Returns:
+            int: The updated heading after the turn.
+        """
+        current = self.heading % 360  # Normalize to 0-360
+        new_heading = new_heading % 360  # Ensure target is within bounds
 
-        if delta > 0:  # Turn Right
-            print(f"Turning Right by {delta} degrees")
-            while delta > 0:
-                step = min(5, delta)  # Ensure we don't overshoot
+        # Compute both possible rotation angles
+        delta_right = (new_heading - current) % 360  # Clockwise difference
+        delta_left = (current - new_heading) % 360  # Counterclockwise difference
+
+        # Choose the shortest turn direction
+        if delta_right < delta_left:
+            print(f"Turning Right by {delta_right} degrees")
+            while delta_right > 0:
+                step = min(5, delta_right)  # Ensure we don't overshoot
                 self.motor_controller.TurnRight(step)
-                delta -= step
-                self.heading += step  # Increase heading
+                delta_right -= step
+                self.heading = (self.heading + step) % 360  # Keep within [0,360]
                 print(f"Updated heading: {self.heading}°")
+                time.sleep(0.1)  # Small delay for motor execution
 
-        elif delta < 0:  # Turn Left
-            print(f"Turning Left by {-delta} degrees")
-            while delta < 0:
-                step = min(5, abs(delta))
+        else:
+            print(f"Turning Left by {delta_left} degrees")
+            while delta_left > 0:
+                step = min(5, delta_left)
                 self.motor_controller.TurnLeft(step)
-                delta += step  # Move towards 0
-                self.heading -= step  # Decrease heading
+                delta_left -= step
+                self.heading = (self.heading - step) % 360  # Keep within [0,360]
                 print(f"Updated heading: {self.heading}°")
-
-        else:  # No change needed
-            print("Keep current heading. No turn required.")
+                time.sleep(0.1)  # Small delay for motor execution
 
         return self.heading
 
@@ -259,7 +267,13 @@ class AutoPi:
 
         # Calculate target heading using atan2 (prevents division by zero)
         target_angle = math.degrees(math.atan2(shift_y, shift_x))
+        
+        self.change_heading(target_angle)
+        
+        # Update heading
+        self.heading = target_angle
 
+        """
         # Normalize angles to be within 0-360 range
         current_heading = self.heading % 360
         target_angle = target_angle % 360
@@ -272,21 +286,21 @@ class AutoPi:
                 self.motor_controller.TurnLeft(abs(rotate_ang))
             else:
                 self.motor_controller.TurnRight(abs(rotate_ang))
-        
-        # Update heading
-        self.heading = target_angle
+        """
 
         # Compute Euclidean distance to move forward
-        distance = math.sqrt(shift_x**2 + shift_y**2)
-
-        print(f"Moving to {next_position}, turning {rotate_ang:.2f} degrees, then driving {distance:.2f} units forward.")
+        distance = math.sqrt(shift_x**2 + shift_y**2) # in units
+        distance_cm = 10 * distance
+        print(f"distance in units: {distance}, in cm: {distance_cm}")
+        #print(f"Moving to {next_position}, turning {rotate_ang:.2f} degrees, then driving {distance:.2f} units forward.")
 
         # Move forward
-        self.motor_controller.DriveForward(distance) #distance in cm
+        self.motor_controller.DriveForward(distance_cm) #distance in cm
 
         # Update internal map representation
         self.map_center = next_position  # Update rover's position
         self.update_map()
+        
     """           
     def update_map_obstacle(self,distance):
         print("Updating map after avoiding obstacle")

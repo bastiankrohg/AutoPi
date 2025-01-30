@@ -305,6 +305,8 @@ class NavigationController:
 
         # Normalize the angle to [-180, 180]
         turn_angle = (turn_angle + 180) % 360 - 180
+        # debug
+        print(f"Current: {current_position}, Target: {next_waypoint}, Turn Angle: {turn_angle}")
         return turn_angle
 
     def drive_to_waypoint(self, current_position, next_waypoint):
