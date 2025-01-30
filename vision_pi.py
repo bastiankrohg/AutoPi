@@ -15,7 +15,7 @@ import numpy as np
 
 
 class VisionPi:
-    def __init__(self,rtsp_url,path1,path2,path3,modelpath,mode):
+    def __init__(self,rtsp_url,path1,path2,path3,modelpath,mode,message_queue):
         self.rtsp_url= rtsp_url
         self.new_image = path1
         self.old_image = path2
@@ -23,7 +23,7 @@ class VisionPi:
         self.modelpath = modelpath
         self.state = -1
         self.direction = 0.00
-        self.message_queue = queue.message_queue
+        self.message_queue = message_queue
         self.mode=mode     #0 - autonomy; 1 - hybride; or 2 - with coral
     
     ## functions for the Tensorflow model preparation and utilisation
