@@ -3,13 +3,12 @@ import signal
 import sys
 from typing import Any
 import rover
-import rover_protos.mars_rover_pb2
-import rover_protos.mars_rover_pb2_grpc
+import datetime
 import time
 import tensorflow.lite as tflite
 import threading
 import queue
-
+import cv2
 
 
 
@@ -57,7 +56,7 @@ class VisionCoral:
 
         # Iterate through detections
         for i in range(len(scores)):
-            if scores[i] > 0.5  # High confidence
+            if scores[i] > 0.5:  # High confidence
                 # Extract bounding box and calculate x-center
                 ymin, xmin, ymax, xmax = boxes[i]
                 if image_size:  # Scale coordinates back to original image size
@@ -126,7 +125,7 @@ class VisionCoral:
                 position=self.process_image()
                 if self.beer == 1:
                     self.direction=self.calcul_direction(position)
-                    print(f" Alert: Bottle detected. Direction = {self.direction:.2f}°")
+                    print(f" Alert: Bottle detected. Direction = {self.direction:.2f}ï¿½")
                     #send beer_detected and direction to pi
                 elif self.beer == 0:
                     print(f" Image processed, No beer found")
