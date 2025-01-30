@@ -199,14 +199,14 @@ class ObstacleController:
         """Periodically checks the sensors and signals an obstacle if necessary."""
 
         ultrasound_distance = self.ultrasound_sensor()
-        camera_detection = self.camera_sensor()
+        #camera_detection = self.camera_sensor()
 
         if ultrasound_distance < 10:  # Threshold for obstacle detection in cm
             self.queue.put(("Ultrasound detected obstacle",ultrasound_distance))
             self.obstacle_alert.set()
-        elif camera_detection:
-            self.queue.put("Camera detected obstacle")
-            self.obstacle_alert.set()
+        #elif camera_detection:
+        #    self.queue.put("Camera detected obstacle")
+        #    self.obstacle_alert.set()
 
 
     def start(self):
