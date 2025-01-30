@@ -97,8 +97,6 @@ class AutoPi:
         self.speed_angle_right=self.motor_controller.Calibrate_turn_right(50)
         self.speed_forward=self.motor_controller.calibration_forward(80)
         
-        # initialise obstacle_detector
-        self.obstacle_detector = ObstacleController(self.sensor_controller.get_ultrasound_distance)
         self.distance_obstacle = -1
         # Message queue for VisionPi communication
         self.message_queue = queue.Queue()
@@ -123,7 +121,8 @@ class AutoPi:
             path3="/home/pi/cropped_images",
             modelpath="/home/pi/models/beer_model.tflite",
             mode=0,
-            message_queue=self.message_queue
+            message_queue=self.message_queue, 
+            mjpeg=self.mjpeg_server
         )
         self.vision_thread = threading.Thread(target=self.vision.start, daemon=True)
         self.vision_thread.start()
@@ -551,8 +550,8 @@ if __name__ == "__main__":
         """
     except Exception as e:
         pi.set_state(RoverState.IDLE)
-        logger.error(f"Critical error during cleanup: {e}", exc_info=True)
-        logging.info(f"An error occurred: {e}")
+        logging.error(f"Critical error during cleanup: {e}", exc_info=True)
+        #logging.info(f"An error occurred: {e}")
     finally:
         pi.set_state(RoverState.IDLE)
         logging.info("Cleaning up...")

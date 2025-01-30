@@ -13,9 +13,12 @@ import cv2
 import numpy as np
 import json
 
+import logging
+# Use existing logger
+logger = logging.getLogger(__name__)
 
 class VisionPi:
-    def __init__(self,rtsp_url,path1,path2,path3,modelpath,mode,message_queue):
+    def __init__(self,rtsp_url,path1,path2,path3,modelpath,mode,message_queue,mjpeg):
         self.rtsp_url= rtsp_url
         self.new_image = path1
         self.old_image = path2
@@ -25,6 +28,7 @@ class VisionPi:
         self.direction = 0.00
         self.message_queue = message_queue
         self.mode=mode     #0 - autonomy; 1 - hybride; or 2 - with coral
+        self.mjpeg=mjpeg
 
         self.running = False
         self.thread = None
@@ -33,7 +37,7 @@ class VisionPi:
     """
     def load_tflite_model(self):
         #Load the TensorFlow Lite model.
-        print(f"[{datetime.datetime.now()}] Loading TensorFlow Lite model from {self.modelpath}...")
+        logger.info(f"[{datetime.datetime.now()}] Loading TensorFlow Lite model from {self.modelpath}...")
         interpreter = tflite.Interpreter(model_path=self.modelpath)
         interpreter.allocate_tensors()
         return interpreter
@@ -65,14 +69,14 @@ class VisionPi:
             self.running = True
             self.thread = threading.Thread(target=self.run, daemon=True)
             self.thread.start()
-            print(f"VisionPi started.")
+            logger.info(f"VisionPi started.")
 
     def stop(self):
         """Stops the VisionPi listener."""
         self.running = False
         if self.thread:
             self.thread.join()
-            print("VisionPi listener stopped.")
+            logger.info("VisionPi listener stopped.")
 
     ##image processing
     def compare_images(self):
@@ -88,7 +92,7 @@ class VisionPi:
 
         # Calculate difference percentage
         difference = 1 - score
-        print(f"[{datetime.datetime.now()}] SSIM score: {score:.4f}, Difference: {difference:.4f}")
+        logger.info(f"[{datetime.datetime.now()}] SSIM score: {score:.4f}, Difference: {difference:.4f}")
         return difference
 
     def test_bottle_detection(self):
@@ -96,7 +100,7 @@ class VisionPi:
         Simulated bottle detection function that processes the image.
         Replace with the actual implementation.
         """
-        print(f"[{datetime.datetime.now()}] Processing image using test_bottle_detection...")
+        logger.info(f"[{datetime.datetime.now()}] Processing image using test_bottle_detection...")
     
         # Resize the image for processing
         image = cv2.resize(self.new_image, (640, 480))
@@ -153,7 +157,7 @@ class VisionPi:
                     "path": save_path
                 })
 
-        print(f"[{datetime.datetime.now()}] Image processing complete. Cropped images saved to {self.cropped_images}.")
+        logger.info(f"[{datetime.datetime.now()}] Image processing complete. Cropped images saved to {self.cropped_images}.")
     
         # Return the array of cropped image data
         return cropped_image_data
@@ -164,7 +168,7 @@ class VisionPi:
         Process cropped images using a TensorFlow Lite model to detect bottles.
         Stops as soon as a bottle is detected and returns its position.
         """
-        print("hello")
+        logger.info("hello")
         """
         interpreter = self.load_tflite_model(self.modelpath)
 
@@ -182,11 +186,11 @@ class VisionPi:
             is_beer = prediction[0][1] > 0.5  # If the probability of "beer" is greater than 0.5
 
             if is_beer:
-                print(f"[{datetime.datetime.now()}] Beer detected at position: {position}")
+                logger.info(f"[{datetime.datetime.now()}] Beer detected at position: {position}")
                 self.state=4
                 return position  # Return immediately when a beer is detected
 
-        print(f"[{datetime.datetime.now()}] No beer detected in cropped images.")
+        logger.info(f"[{datetime.datetime.now()}] No beer detected in cropped images.")
         self.state=3
         return None  # Return None if no beer is found
         """
@@ -222,7 +226,7 @@ class VisionPi:
         cap = cv2.VideoCapture(self.rtsp_url)  # Open the RTSP stream
 
         if not cap.isOpened():
-            print("Error: Unable to open RTSP stream.")
+            logger.info("Error: Unable to open RTSP stream.")
             return
 
         previous_image = None
@@ -231,12 +235,12 @@ class VisionPi:
         # Capture a frame from the stream
         ret, frame = cap.read()
         if not ret:
-            print(f"[{datetime.datetime.now()}] Error: Unable to read frame from stream.")
+            logger.info(f"[{datetime.datetime.now()}] Error: Unable to read frame from stream.")
             return
 
         # Save the current frame to the actual image path
         cv2.imwrite(self.new_image, frame)
-        print(f"[{datetime.datetime.now()}] Saved current frame as {self.path2}")
+        logger.info(f"[{datetime.datetime.now()}] Saved current frame as {self.path2}")
 
         # If there is a previous image, compare it with the current image
         if previous_image is not None:
@@ -244,10 +248,10 @@ class VisionPi:
             difference = VisionPi.compare_images(self.new_image, self.old_image)
 
             if difference < 0.1:
-                print(f"[{datetime.datetime.now()}] Images are too similar (<10%). Skipping.")
+                logger.info(f"[{datetime.datetime.now()}] Images are too similar (<10%). Skipping.")
                 self.state = 0
             elif 0.1 <= difference <= 0.7  or (0.1<=difference and self.mode==0):
-                print(f"[{datetime.datetime.now()}] Images are moderately different (10%-70%). Processing.")
+                logger.info(f"[{datetime.datetime.now()}] Images are moderately different (10%-70%). Processing.")
                 self.state = 1
                 #cropped_images_with_locations =VisionPi.test_bottle_detection(frame)
                 #location=VisionPi.process_cropped_image(self, cropped_images_with_locations)
@@ -255,7 +259,7 @@ class VisionPi:
                 #    VisionPi.calcul_direction(location)
               
             elif (difference > 0.7 and self.mode==2) or (0.1<=difference and self.mode==2):
-                print(f"[{datetime.datetime.now()}] Images are highly different (>70%). Sending to Coral.")
+                logger.info(f"[{datetime.datetime.now()}] Images are highly different (>70%). Sending to Coral.")
                 self.state = 2
                 
                 #on attend un retour et on envoie a autopi la direction
@@ -263,14 +267,14 @@ class VisionPi:
         # Update the previous image
         cv2.imwrite(self.old_image, frame)
         previous_image = cv2.imread(self.new_image)
-        print(f"[{datetime.datetime.now()}] Updated previous frame as {self.path1}")
+        logger.info(f"[{datetime.datetime.now()}] Updated previous frame as {self.path1}")
 
         # Wait for the specified interval before capturing the next frame
         time.sleep(self.interval)
 
         # Release the stream
         cap.release()
-        print(f"[{datetime.datetime.now()}] Stream closed.")
+        logger.info(f"[{datetime.datetime.now()}] Stream closed.")
 
     def process_inference_data(self, data):
         """Processes incoming inference results from Coral."""
@@ -278,25 +282,25 @@ class VisionPi:
             detections = json.loads(data)
             return detections if detections else []
         except json.JSONDecodeError:
-            print("[ERROR] Failed to decode JSON from incoming data.")
+            logger.info("[ERROR] Failed to decode JSON from incoming data.")
             return []
 
     def run(self):
         try:
             while self.running:
                 if self.mode == 0: # Pi only
-                    print("Mode: Pi only")
-                    print(f"[{datetime.datetime.now()}] Starting one image processing cycle...")
+                    logger.info("Mode: Pi only")
+                    logger.info(f"[{datetime.datetime.now()}] Starting one image processing cycle...")
                     """
                     # Process a single cycle
                     self.run_1_time_hybrid()
 
                     # React based on the state
                     if self.state == 0:
-                        print(f"[{datetime.datetime.now()}] State 0: No action required.")
+                        logger.info(f"[{datetime.datetime.now()}] State 0: No action required.")
                         #wait until the coral get the 
                     elif self.state == 3:
-                        print(f"[{datetime.datetime.now()}] Alert: Bottle detected. Direction = {self.direction:.2f}°")
+                        logger.info(f"[{datetime.datetime.now()}] Alert: Bottle detected. Direction = {self.direction:.2f}°")
                         self.message_queue.put({"type": "bottle_detected", "direction": self.direction})
                     """
                 elif self.mode == 1: # TODO Hybrid mode
@@ -306,7 +310,7 @@ class VisionPi:
                     # self.process_inference_data(data)
                     continue
                 else: 
-                    print("Unexpected mode: ", self.mode)
+                    logger.info("Unexpected mode: ", self.mode)
                     break
                 # Wait for 4 seconds before repeating
                 time.sleep(4)

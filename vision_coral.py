@@ -10,7 +10,9 @@ import threading
 import queue
 import cv2
 
-
+import logging
+# Use existing logger
+logger = logging.getLogger(__name__)
 
 class VisionCoral:
     def __init__(self,modelpath):
@@ -27,7 +29,7 @@ class VisionCoral:
         """
         Load the TensorFlow Lite model.
         """
-        print(f"[{datetime.datetime.now()}] Loading TensorFlow Lite model from {self.modelpath}...")
+        logger.info(f"[{datetime.datetime.now()}] Loading TensorFlow Lite model from {self.modelpath}...")
         interpreter = tflite.Interpreter(model_path=self.modelpath)
         interpreter.allocate_tensors()
         return interpreter
@@ -117,7 +119,7 @@ class VisionCoral:
             """
 
             while True:
-                print(f"[{datetime.datetime.now()}] Starting one image processing cycle...")
+                logger.info(f"[{datetime.datetime.now()}] Starting one image processing cycle...")
             
                 #wait for an image
                 
@@ -125,10 +127,10 @@ class VisionCoral:
                 position=self.process_image()
                 if self.beer == 1:
                     self.direction=self.calcul_direction(position)
-                    print(f" Alert: Bottle detected. Direction = {self.direction:.2f}�")
+                    logger.warning(f" Alert: Bottle detected. Direction = {self.direction:.2f}�")
                     #send beer_detected and direction to pi
                 elif self.beer == 0:
-                    print(f" Image processed, No beer found")
+                    logger.info(f" Image processed, No beer found")
                 self.beer=0
 
     

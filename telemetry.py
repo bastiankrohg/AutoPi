@@ -7,6 +7,9 @@ import psutil
 import socket
 import rover.rover
 
+import logging
+# Use existing logger
+logger = logging.getLogger(__name__)
 
 class Telemetry:
     def __init__(self, telemetry_ip, telemetry_port, get_telemetry_data, send_rate=1.0):
@@ -45,18 +48,18 @@ class Telemetry:
             self.running = True
             self.thread = threading.Thread(target=self.telemetry_loop, daemon=True)
             self.thread.start()
-            print("Telemetry transmission started.")
+            logger.info("Telemetry transmission started.")
 
     def stop(self):
         """Stops the telemetry transmission."""
         self.running = False
         if self.thread:
             self.thread.join()
-            print("Telemetry transmission stopped.")
+            logger.info("Telemetry transmission stopped.")
 
     def telemetry_loop(self):
         """Telemetry loop that sends data at the specified send rate."""
-        print("Starting telemetry loop...")
+        logger.info("Starting telemetry loop...")
         self.telemetry_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.telemetry_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         i=0
@@ -66,7 +69,7 @@ class Telemetry:
             self.logger.info(json.dumps(telemetry_data))
             self.telemetry_socket.sendto(json.dumps(telemetry_data).encode("utf-8"), (self.telemetry_ip, self.telemetry_port))
             if i%20==0:
-                print(f"Telemetry sent: {telemetry_data}")
+                logger.info(f"Telemetry sent: {telemetry_data}")
             i+=1
             time.sleep(self.send_rate)
 
