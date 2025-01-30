@@ -15,6 +15,8 @@ class RoverHardware:
         self.rover.init(brightness=brightness, PiBit=PiBit)
         print("RoverHardware initialized.")
 
+TURN_CST = 2
+DRIVE_CST = 3
 
 class MotorController:
     def __init__(self, rover=None):
@@ -67,43 +69,43 @@ class MotorController:
     def Calibrate_turn_right(self, speed) :
             print(f"Rover turning Right at speed 50")
             self.turn_right(50)
-            time.sleep(2)
+            time.sleep(TURN_CST)
             self.stop()
             angle= float (input ("Angle turned: "))
             if angle is not None:
-                speed_ang=angle/5
+                speed_ang=angle/TURN_CST
             else: 
                 print("Default angular velocity: 1")
                 speed_ang=1
-            print (f"angular speed :{speed_ang}") 
+            print (f"Angular speed: {speed_ang}") 
             self.angular_speed_right =speed_ang
 
     def Calibrate_turn_left(self, speed) :
             print(f"Rover turning Right at speed {speed}")
             self.turn_left(50)
-            time.sleep(2)
+            time.sleep(TURN_CST)
             self.stop()
             angle= float (input ("Angle turned: "))
             if angle is not None:
-                speed_ang=angle/5
+                speed_ang=angle/TURN_CST
             else: 
                 print("Default angular velocity: 1")
                 speed_ang=1
-            print (f"angular speed :{speed_ang}") 
-            self.angular_speed_left =speed_ang
+            print (f"Angular speed: {speed_ang}") 
+            self.angular_speed_left = speed_ang
  
     #calibration forward rover
     def calibration_forward(self,speed) :
         self.drive_forward(speed)
-        time.sleep(5)
+        time.sleep(DRIVE_CST)
         self.stop()
         distance= float (input ("distance parcouru par le rover :"))
         if distance is not None:
-            speed_forward=distance/3                   
+            speed_forward=distance/DRIVE_CST                   
         else: 
             print("Default speed: 1")
             speed_forward=1
-        print (f"speed :{speed_forward}") 
+        print (f"Speed :{speed_forward}") 
         self.forward_speed = speed_forward
         
     def TurnRight(self, angle):  
@@ -113,7 +115,7 @@ class MotorController:
         self.turn_right(50)
         time.sleep(timeOFF)
         self.stop()
-        print (f"rover has turn 5 degrees to the right") 
+        print (f"Rover has turned {angle} degrees to the right") 
         
     def TurnLeft(self, angle):  
     
@@ -122,7 +124,7 @@ class MotorController:
         self.turn_left(50)
         time.sleep(timeOFF)
         self.stop()
-        print (f"rover has turn 5 degrees to the left") 
+        print (f"Rover has turned {angle} degrees to the left") 
 
     def TurnRight5(self):  
         
@@ -131,7 +133,7 @@ class MotorController:
         self.turn_right(50)
         time.sleep(timeOFF)
         self.stop()
-        print (f"rover has turn 5 degrees to the right") 
+        print (f"Rover has turned 5 degrees to the right") 
         
     def TurnLeft5(self):  
     
@@ -140,7 +142,7 @@ class MotorController:
         self.turn_left(50)
         time.sleep(timeOFF)
         self.stop()
-        print (f"rover has turn 5 degrees to the left") 
+        print (f"Rover has turned 5 degrees to the left") 
         
     def DriveForward(self, distance_cm=10):
             
@@ -148,7 +150,7 @@ class MotorController:
         self.drive_forward(80)
         time.sleep(timeOFF)
         self.stop()
-        print (f"rover has drive 10 cm ") 
+        print (f"Rover has driven {distance_cm} cm ") 
         
     #a voir
     def turn(self, angle):
@@ -157,6 +159,7 @@ class MotorController:
         Parameters:
         - angle (float): The angle in degrees. Positive for right, negative for left.
         """
+        print("Hello from turn()")
         if angle > 0:
             print(f"Turning right by {angle} degrees")
             self.turn_right(min(abs(angle), 100))  # Limit max speed/angle
@@ -203,9 +206,6 @@ class ObstacleController:
         self.speed_angle_left=0.0
         self.distance_obstacle=0.0
         
-        
-        
-
     def _check_sensors(self):
         """Periodically checks the sensors and signals an obstacle if necessary."""
 
@@ -218,7 +218,6 @@ class ObstacleController:
         #elif camera_detection:
         #    self.queue.put("Camera detected obstacle")
         #    self.obstacle_alert.set()
-
 
     def start(self):
         """Starts the obstacle detection thread."""
@@ -252,7 +251,7 @@ class ObstacleController:
     def avoid_obstacle(self):
         distance_contournement=self.distance_obstacle/math.cos(45)
         self.rover.TurnRight(45,self.speed_angle_right)
-        self.rover.drive_forward(50) ##calibration du drive_forward a faire
+        self.rover.drive_forward(50) # calibration du drive_forward a faire
         time.sleep(5)
         self.rover.TurnLeft(45,self.speed_angle_left)
         self.rover.drive_forward(50)
@@ -269,14 +268,13 @@ class ObstacleController:
               #  distance_parcourue=self.avoid_obstacle(alert[1])
                # self.reset(alert)
 
-
 class NavigationController:
     def __init__(self, motor_controller, sensor_controller):
         """Initializes the navigation controller with motor and sensor controllers."""
         self.motor_controller = motor_controller
         self.sensor_controller = sensor_controller
         self.current_heading = 0  # Heading in degrees, 0 = North
-        self.obstaclecontroller = ObstacleController()#à remplir
+        self.obstaclecontroller = ObstacleController() #a remplir
         self.current_heading = 0  # Heading in degrees, 0 = North
 
     def navigate_around_obstacle(self):

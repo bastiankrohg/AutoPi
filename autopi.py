@@ -362,8 +362,9 @@ class AutoPi:
 
             while self.current_path and self.state == RoverState.EXPLORING:
                 self.to_the_next_point()
-                self.navigation_controller.follow_path(self.map_center, self.current_path)
+                #self.navigation_controller.follow_path(self.map_center, self.current_path)
                 self.display_debug_info()
+                time.sleep(0.1)
                 """
                 resource = self.obstacle_detector.ultrasound_sensor() # TODO Fix?
                 if resource:
@@ -372,7 +373,6 @@ class AutoPi:
                     self.set_state(RoverState.PURSUING_RESOURCE)
                     return
                 """
-                time.sleep(0.1)
                 
     def simulation_mode(self):
         print("Entering simulation mode...")
