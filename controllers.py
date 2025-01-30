@@ -69,8 +69,12 @@ class MotorController:
             self.turn_right(50)
             time.sleep(2)
             self.stop()
-            angle= float (input ("angle parcouru par le rover :"))
-            speed_ang=angle/5                     
+            angle= float (input ("Angle turned: "))
+            if angle is not None:
+                speed_ang=angle/5
+            else: 
+                print("Default angular velocity: 1")
+                speed_ang=1
             print (f"angular speed :{speed_ang}") 
             self.angular_speed_right =speed_ang
 
@@ -79,8 +83,12 @@ class MotorController:
             self.turn_left(50)
             time.sleep(2)
             self.stop()
-            angle= float (input ("angle parcouru par le rover :"))
-            speed_ang=angle/5                     
+            angle= float (input ("Angle turned: "))
+            if angle is not None:
+                speed_ang=angle/5
+            else: 
+                print("Default angular velocity: 1")
+                speed_ang=1
             print (f"angular speed :{speed_ang}") 
             self.angular_speed_left =speed_ang
  
@@ -90,10 +98,13 @@ class MotorController:
         time.sleep(5)
         self.stop()
         distance= float (input ("distance parcouru par le rover :"))
-        speed_forward=distance/3                   
+        if distance is not None:
+            speed_forward=distance/3                   
+        else: 
+            print("Default speed: 1")
+            speed_forward=1
         print (f"speed :{speed_forward}") 
         self.forward_speed = speed_forward
-        
         
     def TurnRight(self, angle):  
     
