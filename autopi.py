@@ -85,6 +85,7 @@ class AutoPi:
             path2="/home/pi/old_image.jpg",
             path3="/home/pi/cropped_images",
             modelpath="/home/pi/models/beer_model.tflite",
+            mode=0,
             message_queue=self.message_queue
         )
 
