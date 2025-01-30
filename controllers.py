@@ -172,7 +172,7 @@ class SensorController:
         return 100
 
 class ObstacleController:
-    def __init__(self, ultrasound_sensor, camera_sensor, detection_interval=0.1):
+    def __init__(self, ultrasound_sensor=None, detection_interval=0.1):
         """
         ObstacleDetector monitors the sensors and triggers an alert if an obstacle is detected.
 
@@ -182,7 +182,7 @@ class ObstacleController:
             detection_interval: Time in seconds between sensor checks.
         """
         self.ultrasound_sensor = ultrasound_sensor
-        self.camera_sensor = camera_sensor
+        self.camera_sensor = None
         self.detection_interval = detection_interval
         self.obstacle_alert = threading.Event()
         self.queue = SimpleQueue()
