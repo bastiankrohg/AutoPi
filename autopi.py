@@ -80,6 +80,8 @@ class AutoPi:
 
         self.rover = RoverHardware(brightness=0, PiBit=False)
 
+        self.stop_event = threading.Event()  # Threading event for stopping execution
+
         self.current_position=[0,0]
         self.motor_controller = MotorController(self.rover)
         self.sensor_controller = SensorController(self.rover)
@@ -173,7 +175,7 @@ class AutoPi:
 
     def telemetry_loop(self):
         print("Starting telemetry loop...")
-        while True:
+        while not self.stop_event.is_set():
             proximity_alert = self.obstacle_detector.get_alert_source() if self.obstacle_detector.is_alerted() else None
             telemetry_data = {
                 "position": self.map_center,
@@ -439,7 +441,7 @@ class AutoPi:
     def display_dashboard(self):
         """Clears the terminal and displays real-time telemetry."""
         try:
-            while self.running:
+            while not self.stop_event.is_set():
                 os.system("clear")  # Clears terminal
                 print("🚀 AutoPi Rover Dashboard\n")
                 print(f"📍 Position: {self.current_position}")
@@ -457,7 +459,7 @@ class AutoPi:
     def run(self):
         print("Starting main control loop...")
         try:
-            while True:
+            while not self.stop_event.is_set():
                 if self.state == RoverState.EXPLORING:
                     self.exploration_mode()
                 #elif self.state == RoverState.AVOIDING_OBSTACLE:
@@ -477,6 +479,7 @@ class AutoPi:
     def signal_handler(self, sig, frame):
         """Handle Ctrl+C signal to stop the rover and clean up resources."""
         print("Ctrl+C detected. Cleaning up...")
+        self.stop_event.set()  # Signal all threads to stop
         self.cleanup()
         print("Cleanup complete. Exiting.")
         sys.exit(0)
@@ -545,12 +548,12 @@ if __name__ == "__main__":
             pi.display_dashboard()  # Blocks execution until Ctrl+C
 
         # If not running dashboard, keep main loop alive
-        while pi.running:
+        while not pi.stop_event.is_set():
             time.sleep(1)
 
         """
         # Command loop for user input
-        while True:
+        while not self.stop_event.is_set():
             command = input("Enter command (type 'stop' to stop the rover): ").strip().lower()
             if command == "stop":
                 print("Stopping rover...")
