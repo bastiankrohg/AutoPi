@@ -35,20 +35,18 @@ else:
 import logging
 import os
 
-# Configure global logging
+# Define log file
 LOG_FILE = "rover.log"
 
+# Setup logging
 logging.basicConfig(
-    filename=LOG_FILE,
-    filemode="w",  # Overwrite log file on each script start
-    format="%(asctime)s - %(levelname)s - %(message)s",
-    level=logging.DEBUG  # Capture INFO, DEBUG, and ERROR
+    level=logging.DEBUG,  # Log everything (INFO, DEBUG, ERROR, etc.)
+    format="%(asctime)s [%(levelname)s] - %(message)s",
+    handlers=[
+        logging.FileHandler(LOG_FILE, mode="w"),  # Overwrites file on restart
+        logging.StreamHandler(sys.stdout),  # Sends logs to console safely
+    ],
 )
-
-# Also log to console
-console_handler = logging.StreamHandler()
-console_handler.setFormatter(logging.Formatter("%(asctime)s - %(levelname)s - %(message)s"))
-logging.getLogger().addHandler(console_handler)
 
 logging.info("🚀 AutoPi logging initialized.")
 
@@ -465,45 +463,44 @@ class AutoPi:
   
     def signal_handler(self, sig, frame):
         """Handle Ctrl+C signal to stop the rover and clean up resources."""
-        logging.info("Ctrl+C detected. Cleaning up...")
+        print("\nCtrl+C detected. Cleaning up and stopping the rover...")
         self.stop_event.set()  # Signal all threads to stop
         self.cleanup()
-        logging.info("Cleanup complete. Exiting.")
+        print("Cleanup complete. Exiting.")
         sys.exit(0)
 
     def cleanup(self):
         """Perform cleanup tasks before shutting down."""
         try:
-            logging.info("Stopping the rover...")
+            print("Stopping the rover...")
 
-            logging.info("Stopping all services...")
+            print("Stopping all services...")
             
             if self.motor_controller:
-                logging.info("[DEBUG] Stopping motor controller...")
+                print("[DEBUG] Stopping motor controller...")
                 self.motor_controller.cleanup()
-                logging.info("[DEBUG] Motor controller stopped.")
+                print("[DEBUG] Motor controller stopped.")
 
             if self.telemetry:
-                logging.info("[DEBUG] Stopping telemetry...")
+                print("[DEBUG] Stopping telemetry...")
                 self.telemetry.stop()
-                logging.info("[DEBUG] Telemetry stopped.")
+                print("[DEBUG] Telemetry stopped.")
 
             if self.vision:
-                logging.info("[DEBUG] Stopping vision processing...")
+                print("[DEBUG] Stopping vision processing...")
                 self.vision.stop()
-                logging.info("[DEBUG] Vision processing stopped.")
+                print("[DEBUG] Vision processing stopped.")
 
             if self.mjpeg_server:
-                logging.info("[DEBUG] Stopping MJPEG server...")
+                print("[DEBUG] Stopping MJPEG server...")
                 self.mjpeg_server.stop()
-                logging.info("[DEBUG] MJPEG server stopped.")
+                print("[DEBUG] MJPEG server stopped.")
 
-            logging.info("All services stopped.")
+            print("All services stopped.")
 
         except Exception as e:
-            logger.error(f"Critical error during cleanup: {e}", exc_info=True)
-            logging.info(f"Error during cleanup: {e}")
-
+            print(f"Critical error during cleanup: {e}", exc_info=True)
+            logging.error(f"Error during cleanup: {e}")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="AutoPi Rover")
