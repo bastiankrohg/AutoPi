@@ -78,6 +78,17 @@ class AutoPi:
         # Message queue for VisionPi communication
         self.message_queue = queue.Queue()
 
+        # Telemetry thread
+        self.telemetry = Telemetry(telemetry_ip, telemetry_port, self.get_telemetry_data)
+        self.telemetry.start()
+
+        # MJPEG thread
+        self.mjpeg_server = MJPEGStreamServer(('', 8080), MJPEGStreamHandler)
+        #self.mjpeg_thread = threading.Thread(target=start_mjpeg_server, kwargs={"port": 8080}, daemon=True)
+        self.mjpeg_thread = threading.Thread(target=self.mjpeg_server.start, kwargs={"port": 8080}, daemon=True)
+        self.mjpeg_thread.start()
+
+        # Vision thread
         # Initialize VisionPi instance with the queue
         self.vision = VisionPi(
             rtsp_url="rtsp://example.com/stream",
@@ -88,18 +99,9 @@ class AutoPi:
             mode=0,
             message_queue=self.message_queue
         )
-
-        # Vision thread
-        self.vision_thread = threading.Thread(target=self.vision.run, daemon=True)
+        self.vision_thread = threading.Thread(target=self.vision.start, daemon=True)
         self.vision_thread.start()
 
-        # Telemetry
-        self.telemetry = Telemetry(telemetry_ip, telemetry_port, self.get_telemetry_data)
-        self.telemetry.start()
-
-        self.mjpeg_server = MJPEGStreamServer(('', 8080), MJPEGStreamHandler)
-        self.mjpeg_thread = threading.Thread(target=start_mjpeg_server, kwargs={"port": 8080}, daemon=True)
-        self.mjpeg_thread.start()
 
         print("AutoPi initialized.")
         
@@ -148,6 +150,7 @@ class AutoPi:
             print(f"Telemetry data: {telemetry_data}")
             self.telemetry_socket.sendto(json.dumps(telemetry_data).encode("utf-8"), (self.telemetry_ip, self.telemetry_port))
             time.sleep(1)  # Send updates every second
+    
     def get_telemetry_data(self):
         """Gathers telemetry data from the rover."""
         proximity_alert = self.obstacle_detector.get_alert_source() if self.obstacle_detector.is_alerted() else None
@@ -356,13 +359,7 @@ class AutoPi:
         
 
     def start(self):
-        # Demarre les threads pour autopi et vision_pi
-        vision_thread = threading.Thread(target=self.vision_pi_run)
-        vision_thread.start()
-
         self.autopi_run()  # Demarre la logique du chemin principal
-
-        vision_thread.join()  # Attendre que le thread de vision se termine
         
     def run(self):
         print("Starting main control loop...")
@@ -394,20 +391,17 @@ class AutoPi:
         """Perform cleanup tasks before shutting down."""
         try:
             print("Stopping the rover...")
+            print("Stopping all services...")
+
             self.motor_controller.cleanup()  # Stop the motors
-
+            
             self.telemetry.stop()
-
+            self.vision.stop()
             self.mjpeg_server.stop()
-            self.mjpeg_thread.join()
-
-            self.vision_thread.join()
+            print("All services stopped.")
 
         except Exception as e:
             print(f"Error during cleanup: {e}")
-
-
-
 
 
 if __name__ == "__main__":

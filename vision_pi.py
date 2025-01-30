@@ -11,7 +11,7 @@ import threading
 import queue
 import cv2
 import numpy as np
-
+import json
 
 
 class VisionPi:
@@ -25,6 +25,9 @@ class VisionPi:
         self.direction = 0.00
         self.message_queue = message_queue
         self.mode=mode     #0 - autonomy; 1 - hybride; or 2 - with coral
+
+        self.running = False
+        self.thread = None
     
     ## functions for the Tensorflow model preparation and utilisation
     """
@@ -56,6 +59,21 @@ class VisionPi:
 
     """
     
+    def start(self):
+        """Starts the VisionPi listener in a separate thread."""
+        if not self.running:
+            self.running = True
+            self.thread = threading.Thread(target=self.run, daemon=True)
+            self.thread.start()
+            print(f"VisionPi listener started on {self.listen_ip}:{self.listen_port}")
+
+    def stop(self):
+        """Stops the VisionPi listener."""
+        self.running = False
+        if self.thread:
+            self.thread.join()
+            print("VisionPi listener stopped.")
+
     ##image processing
     def compare_images(self):
         """
@@ -172,6 +190,7 @@ class VisionPi:
         self.state=3
         return None  # Return None if no beer is found
         """
+
     def calcul_direction(self, beer_position):
         image_width = 640 #the stream of the camera is in 640*480p
         fov=62.2 # the camera as an a vision angle of 62.2 degres
@@ -190,7 +209,6 @@ class VisionPi:
         # Calculate the angle to turn
         self.direction = pixel_offset * degrees_per_pixel
 
-            
     def one_image_processing(self):
         """
         Captures an image from the RTSP stream 
@@ -254,32 +272,46 @@ class VisionPi:
         cap.release()
         print(f"[{datetime.now()}] Stream closed.")
 
+    def process_inference_data(self, data):
+        """Processes incoming inference results from Coral."""
+        try:
+            detections = json.loads(data)
+            return detections if detections else []
+        except json.JSONDecodeError:
+            print("[ERROR] Failed to decode JSON from incoming data.")
+            return []
 
     def run(self):
-            """
-            Runs the image processing loop every 2 seconds.
-            
-            """
-            while True:
-                    
-                print(f" Starting one image processing cycle...")
-                """
-                # Process a single cycle
-                self.run_1_time_hybrid()
+        try:
+            while self.running:
+                if self.mode == 0: # Pi only
+                    print("Mode: Pi only")
+                    print(f"[{datetime.now()}] Starting one image processing cycle...")
+                    """
+                    # Process a single cycle
+                    self.run_1_time_hybrid()
 
-                # React based on the state
-                if self.state == 0:
-                    print(f"[{datetime.now()}] State 0: No action required.")
-                    #wait until the coral get the 
-                elif self.state == 3:
-                    print(f"[{datetime.now()}] Alert: Bottle detected. Direction = {self.direction:.2f}°")
-                    self.message_queue.put({"type": "bottle_detected", "direction": self.direction})
-                """
-
+                    # React based on the state
+                    if self.state == 0:
+                        print(f"[{datetime.now()}] State 0: No action required.")
+                        #wait until the coral get the 
+                    elif self.state == 3:
+                        print(f"[{datetime.now()}] Alert: Bottle detected. Direction = {self.direction:.2f}°")
+                        self.message_queue.put({"type": "bottle_detected", "direction": self.direction})
+                    """
+                elif self.mode == 1: # TODO Hybrid mode
+                    # self.process_inference_data(data)
+                    continue
+                elif self.mode == 2: # TODO coral mode
+                    # self.process_inference_data(data)
+                    continue
+                else: 
+                    print("Unexpected mode: ", self.mode)
+                    break
                 # Wait for 4 seconds before repeating
                 time.sleep(4)
-
-    
+        except Exception as e:
+            print(f"VisionPi Error: {e}")
 
 if __name__ == "__main__":
     print("hello")

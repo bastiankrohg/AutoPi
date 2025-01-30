@@ -39,6 +39,9 @@ class MJPEGStreamServer(http.server.HTTPServer):
         self.lock = threading.Lock()
         self.should_stop = False
 
+        self.running = False
+        self.thread = None
+
     def update_frame(self, frame):
         with self.lock:
             self.frame = frame
@@ -47,13 +50,22 @@ class MJPEGStreamServer(http.server.HTTPServer):
         with self.lock:
             return self.frame
         
-    def stop(self):
-        """Stop the MJPEG server."""
-        print("Stopping MJPEG server...")
-        self.should_stop = True
-        self.shutdown()
-        print("MJPEG server stopped.")
+    def start(self):
+        """Starts the MJPEG stream server in a separate thread."""
+        if not self.running:
+            self.running = True
+            self.thread = threading.Thread(target=self.serve_forever, daemon=True)
+            self.thread.start()
+            print("MJPEG Stream Server started.")
 
+    def stop(self):
+        """Stops the MJPEG stream server and thread."""
+        self.running = False
+        self.shutdown()
+        if self.thread:
+            self.thread.join()
+            print("MJPEG Stream Server stopped.")
+        
 def start_camera_stream(server):
     picam2 = Picamera2() 
     picam2.configure(picam2.create_preview_configuration(main={"format": "RGB888", "size": (640, 480)}))
