@@ -1,21 +1,26 @@
 import threading
 import time
+import datetime
 import socket
 import json
 import platform
 import argparse
+import queue
+import math
 
 from planning import AStarPlanner
-from obstacle import ObstacleDetector
+from obstacle import ObstacleController
 from telemetry import Telemetry
 from mjpeg import MJPEGStreamHandler, MJPEGStreamServer, start_mjpeg_server
 
 from path import generate_expanding_square_path, generate_random_walk_path, generate_sine_wave_path, generate_spiral_pattern, generate_zigzag_pattern, generate_straight_line_path
+from vision_pi import VisionPi
 
 if platform.system() == "Linux":
     from controllers import MotorController, SensorController, NavigationController, RoverHardware
 else:
     from dummy import MotorController, SensorController, NavigationController
+
 
 # State Machine States
 class RoverState:
@@ -46,13 +51,35 @@ class AutoPi:
         self.debug_mode = debug_mode
         self.sim_mode = sim_mode
         self.heading = "N"  # Default heading is North
-
         # Path selection
-        self.path_type = path_type
-
+        self.path_type = path_type 
         # Obstacle Detector
-        self.obstacle_detector = ObstacleDetector(self.sensor_controller.get_ultrasound_distance)
+        self.obstacle_detector = ObstacleController(self.sensor_controller.get_ultrasound_distance)
         self.obstacle_detector.start()
+ 
+        #set_controller
+        self.speed_angle_left=self.rover.Calibrate_turn_left(50)
+        self.speed_angle_right=self.rover.Calibrate_turn_right(50)
+        
+        # initialise obstacle_detector
+        self.obstacle_detector = ObstacleController(self.sensor_controller.get_ultrasound_distance, self.sensor_controller.detect_resource)
+        self.distance_obstacle = -1
+        # Message queue for VisionPi communication
+        self.message_queue = queue.Queue()
+
+        # Initialize VisionPi instance with the queue
+        self.vision = VisionPi(
+            rtsp_url="rtsp://example.com/stream",
+            path1="/home/pi/new_image.jpg",
+            path2="/home/pi/old_image.jpg",
+            path3="/home/pi/cropped_images",
+            modelpath="/home/pi/models/beer_model.tflite",
+            message_queue=self.message_queue
+        )
+
+        # Vision thread
+        self.vision_thread = threading.Thread(target=self.vision.run, daemon=True)
+        self.vision_thread.start()
 
         # Telemetry
         self.telemetry = Telemetry(telemetry_ip, telemetry_port, self.get_telemetry_data)
@@ -63,16 +90,61 @@ class AutoPi:
         self.mjpeg_thread.start()
 
         print("AutoPi initialized.")
-
+        
         # Draw initial map if in debug mode
         if self.debug_mode:
             self.display_debug_info()
 
+    def handle_messages(self):
+            """
+            Handle messages from VisionPi and ObstacleController.
+            """
+            # Check VisionPi messages
+            while not self.message_queue.empty():
+                message = self.message_queue.get()
+                if message["type"] == "bottle_detected":
+                    direction = message["direction"]
+                    print(f"[{datetime.now()}] AutoPi: Bottle detected. Generating path towards direction {direction:.2f}�.")
+                    self.generate_path_towards(direction)
+                    self.set_state(RoverState.PURSUING_RESOURCE)  # Transition to pursuing resource state
+
+            # Check ObstacleController alerts
+            if self.obstacle_detector.is_alerted():
+                print(f"[{datetime.now()}] Obstacle detected! Switching to avoiding obstacle mode.")
+                self.set_state(RoverState.AVOIDING_OBSTACLE)
+                self.distance_obstacle = self.sensor_controller.get_ultrasound_distance()
+                self.avoid_obstacle()
+                
     def set_state(self, new_state):
         with self.lock:
-            print(f"State change: {self.state} -> {new_state}")
-            self.state = new_state
+             print(f"State change: {self.state} -> {new_state}")
+             self.state = new_state
 
+    
+    def generate_path_towards(self, direction):
+        """
+        Generate a path towards the specified direction.
+        """
+        print(f"Generating path towards direction {direction:.2f}�...")
+        # Implement path generation logic here using `direction`
+       
+    
+
+    def telemetry_loop(self):
+        print("Starting telemetry loop...")
+        while True:
+            proximity_alert = self.obstacle_detector.get_alert_source() if self.obstacle_detector.is_alerted() else None
+            telemetry_data = {
+                "position": self.map_center,
+                "heading": self.heading,
+                "battery_level": self.sensor_controller.get_battery_level(),
+                "ultrasound_distance": self.sensor_controller.get_ultrasound_distance(),
+                "state": self.state,  # Add current state to telemetry
+                "proximity_alert": proximity_alert  # Add proximity indicator
+            }
+            print(f"Telemetry data: {telemetry_data}")
+            self.telemetry_socket.sendto(json.dumps(telemetry_data).encode("utf-8"), (self.telemetry_ip, self.telemetry_port))
+            time.sleep(1)  # Send updates every second
     def get_telemetry_data(self):
         """Gathers telemetry data from the rover."""
         proximity_alert = self.obstacle_detector.get_alert_source() if self.obstacle_detector.is_alerted() else None
@@ -222,6 +294,7 @@ class AutoPi:
             time.sleep(0.1)
 
     def run(self):
+        self.obstacle_detector.start()
         print("Starting main control loop...")
         try:
             while True:
@@ -256,6 +329,7 @@ class AutoPi:
             self.mjpeg_server.stop()
         except Exception as e:
             print(f"Error during cleanup: {e}")
+
 
 
 if __name__ == "__main__":
