@@ -2,6 +2,8 @@ from email import message
 import threading
 import time
 import datetime
+import signal
+import sys
 import socket
 import json
 import platform
@@ -412,7 +414,7 @@ class AutoPi:
         print("Ctrl+C detected. Cleaning up...")
         self.cleanup()
         print("Cleanup complete. Exiting.")
-        exit(0)
+        sys.exit(0)
 
     def cleanup(self):
         """Perform cleanup tasks before shutting down."""
@@ -432,16 +434,6 @@ class AutoPi:
 
 
 if __name__ == "__main__":
-    import signal
-
-    # Handle Ctrl+C gracefully
-    def signal_handler(sig, frame):
-        print("\nCtrl+C detected. Cleaning up and stopping the rover...")
-        pi.cleanup()  # Ensure the rover stops
-        exit(0)
-
-    signal.signal(signal.SIGINT, signal_handler)
-
     parser = argparse.ArgumentParser(description="AutoPi Rover")
     parser.add_argument("--debug", action="store_true", help="Enable debug mode to display mapping grid and path planning.")
     parser.add_argument("--path", type=str, default="expanding_square", help="Select path type: random_walk, spiral, zigzag, straight_line, sine_wave, expanding_square")
@@ -454,6 +446,7 @@ if __name__ == "__main__":
     print("Initializing rover...")
     try:
         pi = AutoPi(TELEMETRY_IP, TELEMETRY_PORT, debug_mode=args.debug, path_type=args.path, sim_mode=args.sim)
+        signal.signal(signal.SIGINT, pi.signal_handler)
 
         # Start in appropriate mode
         initial_state = RoverState.SIMULATING if args.sim else RoverState.EXPLORING
