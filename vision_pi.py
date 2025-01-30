@@ -3,65 +3,81 @@ import signal
 import sys
 import os
 from typing import Any
-import rover
 import time
-import datetime
-#import tensorflow.lite as tflite
 import threading
 import queue
 import cv2
 import numpy as np
 import json
+from listener import VisionCoralListener
 
 import logging
 # Use existing logger
 logger = logging.getLogger(__name__)
 
+
 class VisionPi:
-    def __init__(self,rtsp_url,path1,path2,path3,modelpath,mode,message_queue,mjpeg):
+    def __init__(self,rtsp_url,modelpath="/Autopi/model.onnx",mode=0,message_queue,mjpeg_server):
+        self.mjpeg_server=mjpeg_server
         self.rtsp_url= rtsp_url
-        self.new_image = path1
-        self.old_image = path2
-        self.cropped_image = path3
+        self.new_image = None
+        self.old_image = self.mjpeg_server.get_frame()
         self.modelpath = modelpath
         self.state = -1
+        self.result= None
+        self.difference =0
         self.direction = 0.00
         self.message_queue = message_queue
+        
         self.mode=mode     #0 - autonomy; 1 - hybride; or 2 - with coral
-        self.mjpeg=mjpeg
+        self.listener=VisionCoralListener()
 
+        self.mjpeg_server
         self.running = False
         self.thread = None
+        self.net= None
     
-    ## functions for the Tensorflow model preparation and utilisation
-    """
-    def load_tflite_model(self):
+        ## functions for the Tensorflow model preparation and utilisation
+    
+    def load_yolov8nano_model(self):
         #Load the TensorFlow Lite model.
-        logger.info(f"[{datetime.datetime.now()}] Loading TensorFlow Lite model from {self.modelpath}...")
-        interpreter = tflite.Interpreter(model_path=self.modelpath)
-        interpreter.allocate_tensors()
-        return interpreter
+        print(f"[{datetime.datetime.now()}] Loading Yolov8nano model from {self.modelpath}...")
+        # Charger le modele ONNX
+        net2 = cv2.dnn.readNet("C:/Users/samsung/Downloads/model_test_quantized.onnx")
+        net2.setPreferableBackend(cv2.dnn.DNN_BACKEND_OPENCV)  # CPU
+        net2.setPreferableTarget(cv2.dnn.DNN_TARGET_CPU)
+        self.net =net
 
-    def run_tflite_model(self, interpreter, input_image):
-        #Run inference with the TFLite model on an input image.
-        input_details = interpreter.get_input_details()
-        output_details = interpreter.get_output_details()
+    def run_yolov8nano_model(self):
+        image = cv2.imread(self.new_image)
+        blob = cv2.dnn.blobFromImage(image, scalefactor=1/255.0, size=(640, 640), swapRB=True, crop=False)
+        self.net.setInput(blob)
+    
+        # Mesurer le temps d'inférence
+        start_time = time.time()
+        output = self.net.forward()
+        end_time = time.time()
+        
+    
+        inference_time = end_time - start_time
+        print(f"Inference Time: {inference_time:.4f} seconds")
+        
+        # Supprimer la premiere dimension inutile
+        output = output[0]  # Devient (5, 8400)
 
-        # Prepare the image for the model
-        input_shape = input_details[0]['shape']
-        input_data = cv2.resize(input_image, (input_shape[1], input_shape[2]))  # Resize to model input size
-        input_data = input_data.astype('float32') / 255.0  # Normalize the image
-        input_data = input_data.reshape(input_shape)  # Reshape to match input shape
+        # Transposer pour faciliter la lecture chaque ligne devient une prediction
+        output = output.T  # Devient (8400, 5)
 
-        # Run inference
-        interpreter.set_tensor(input_details[0]['index'], input_data)
-        interpreter.invoke()
+        for detection in output:
+            x_min, y_min, x_max, y_max, confidence = detection  # Extraction des 5 valeurs
 
-        # Retrieve the results
-        output_data = interpreter.get_tensor(output_details[0]['index'])
-        return output_data
-
-    """
+        if confidence > 0.7:  # Filtrer les detections avec une confiance elevee
+            output2=[(x_max-x_min)/2,confidence]
+            print("bottle found")
+            self.state=1
+            return output2
+        return None
+    
     
     def start(self):
         """Starts the VisionPi in a separate thread."""
@@ -69,39 +85,49 @@ class VisionPi:
             self.running = True
             self.thread = threading.Thread(target=self.run, daemon=True)
             self.thread.start()
-            logger.info(f"VisionPi started.")
+            print(f"VisionPi started.")
 
     def stop(self):
         """Stops the VisionPi listener."""
         self.running = False
         if self.thread:
             self.thread.join()
-            logger.info("VisionPi listener stopped.")
+             logger.info("VisionPi listener stopped.")
 
     ##image processing
     def compare_images(self):
         """
         Compares two images using SSIM and returns the difference percentage.
-        """
-        # Convert images to grayscale
-        gray1 = cv2.cvtColor(self.new_image, cv2.COLOR_BGR2GRAY)
-        gray2 = cv2.cvtColor(self.old_image, cv2.COLOR_BGR2GRAY)
+        """   
 
-        # Compute SSIM (Structural Similarity Index)
-        score, _ = cv2.ssim(gray1, gray2, full=True)
+        # Redimensionner l image precedente pour qu'elle corresponde a la taille de l'image actuelle
+        if self.old_image.shape != self.new_image.shape:
+            self.old_image = cv2.resize(self.old_image, (self.new_image.shape[1], self.new_image.shape[0]))
 
-        # Calculate difference percentage
-        difference = 1 - score
-        logger.info(f"[{datetime.datetime.now()}] SSIM score: {score:.4f}, Difference: {difference:.4f}")
-        return difference
+        # Convertir les images en niveaux de gris
+        gray_previous = cv2.cvtColor(self.old_image, cv2.COLOR_BGR2GRAY)
+        gray_current = cv2.cvtColor(self.new_image, cv2.COLOR_BGR2GRAY)
 
-    def test_bottle_detection(self):
+        # Calculer la difference absolue entre les deux images
+        diff = cv2.absdiff(gray_previous, gray_current)
+
+        # Calculer le taux de differentiation
+        non_zero_count = np.count_nonzero(diff)
+        total_pixels = diff.size
+        difference_rate = (non_zero_count / total_pixels) 
+        self.difference = difference_rate
+        
+        self.old_image=self.new_image
+
+         logger.info(f"Taux de differentiation : {difference_rate:.2f}%")
+
+    def test_bottle_detection(self) :
         """
         Simulated bottle detection function that processes the image.
         Replace with the actual implementation.
         """
-        logger.info(f"[{datetime.datetime.now()}] Processing image using test_bottle_detection...")
-    
+         logger.info(f"[{datetime.datetime.now()}] Processing image using test_bottle_detection...")
+
         # Resize the image for processing
         image = cv2.resize(self.new_image, (640, 480))
 
@@ -131,75 +157,31 @@ class VisionPi:
         # Detect contours from the cleaned mask
         contours, _ = cv2.findContours(mask_cleaned, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
-        # Ensure the output directory exists
-        if not os.path.exists(self.cropped_images):
-            os.makedirs(self.cropped_images)
+        # Count potential bottles
+        bottle_count = 0
 
-        # Store regions and their paths
-        cropped_image_data = []  # To store (position, path) pairs
-
-        for idx, cnt in enumerate(contours):
+        for cnt in contours:
             x, y, w, h = cv2.boundingRect(cnt)
             aspect_ratio = h / float(w)
 
             # Looser criteria: elongated shape, minimal size
             if aspect_ratio > 1.2 and h > 50 and cv2.contourArea(cnt) > 200:
-                # Crop the detected region
-                cropped_image = self.new_image[y:y + h, x:x + w]
+                bottle_count += 1
 
-                # Save the cropped image
-                save_path = os.path.join(self.cropped_images, f"cropped_image_{idx}.png")
-                cv2.imwrite(save_path, cropped_image)
-
-                # Append position and path to the results
-                cropped_image_data.append({
-                    "position": (x, y, w, h),
-                    "path": save_path
-                })
-
-        logger.info(f"[{datetime.datetime.now()}] Image processing complete. Cropped images saved to {self.cropped_images}.")
+         logger.info(f"[{datetime.datetime.now()}] Image processing complete. Potential bottles detected: {bottle_count}.")
     
-        # Return the array of cropped image data
-        return cropped_image_data
-     
-    
-    def process_cropped_image(self, cropped_image_data):
-        """
-        Process cropped images using a TensorFlow Lite model to detect bottles.
-        Stops as soon as a bottle is detected and returns its position.
-        """
-        logger.info("hello")
-        """
-        interpreter = self.load_tflite_model(self.modelpath)
+        # Return the count of detected potential bottles
+        return bottle_count
 
-        for data in cropped_image_data:
-            image_path = data["path"]
-            position = data["position"]
+        
 
-            # Load the cropped image
-            cropped_image = cv2.imread(image_path)
-
-            # Run recognition using the model
-            prediction = self.run_tflite_model(interpreter, cropped_image)
-
-            # Assume the model returns probabilities for each class (e.g., [prob_non_beer, prob_beer])
-            is_beer = prediction[0][1] > 0.5  # If the probability of "beer" is greater than 0.5
-
-            if is_beer:
-                logger.info(f"[{datetime.datetime.now()}] Beer detected at position: {position}")
-                self.state=4
-                return position  # Return immediately when a beer is detected
-
-        logger.info(f"[{datetime.datetime.now()}] No beer detected in cropped images.")
-        self.state=3
-        return None  # Return None if no beer is found
-        """
-
-    def calcul_direction(self, beer_position):
+    def calcul_direction(self):
         image_width = 640 #the stream of the camera is in 640*480p
         fov=62.2 # the camera as an a vision angle of 62.2 degres
-        x, _, w, _ = beer_position
-        beer_center_x = x + (w / 2)
+        if self.result is None:
+             logger.info("Erreur: Aucune detection, impossible de calculer la direction.")
+            return
+        beer_center_x = self.result[0]
 
         # Calculate the image's center x-coordinate
         image_center_x = image_width / 2
@@ -213,68 +195,59 @@ class VisionPi:
         # Calculate the angle to turn
         self.direction = pixel_offset * degrees_per_pixel
 
-    def one_image_processing(self):
+    def one_image_processing_autonom(self):
         """
         Captures an image from the RTSP stream 
         Compares the current image with the previous one and performs actions based on the difference:
         - <10%: Does nothing.
-        - 10%-70%: Processes the image with test_bottle_detectiona and process_cropped_image
-        - >70%: Sends the image to Coral.
+        - 10%-70%: Processes the image with test_bottle_detectiona and model
         Return the turn angle if a beer is found
         """
-        self.code = -1
-        cap = cv2.VideoCapture(self.rtsp_url)  # Open the RTSP stream
+        
+        # If there is a previous image, compare it with the current image
+        if new_image is not None:
+            difference = VisionPi.compare_images(self.new_image, self.old_image)
 
-        if not cap.isOpened():
-            logger.info("Error: Unable to open RTSP stream.")
-            return
-
-        previous_image = None
-
-    
-        # Capture a frame from the stream
-        ret, frame = cap.read()
-        if not ret:
-            logger.info(f"[{datetime.datetime.now()}] Error: Unable to read frame from stream.")
-            return
-
-        # Save the current frame to the actual image path
-        cv2.imwrite(self.new_image, frame)
-        logger.info(f"[{datetime.datetime.now()}] Saved current frame as {self.path2}")
+            if difference < 0.1 :
+                 logger.info(f"[{datetime.datetime.now()}] Images are too similar (<10%). Skipping.")
+            elif 0.1 <= difference :
+                 logger.info(f"[{datetime.datetime.now()}] Images are moderately different (10%-70%). Processing.")
+                bottle_count=self.test_bottle_detection()
+                if bottle_count :
+                    self.result=self.run_yolov8nano_model()  
+                
+    def one_image_processing_hybrid(self):
+        """
+        Captures an image from the RTSP stream 
+        Compares the current image with the previous one and performs actions based on the difference:
+        - <10%: Does nothing.
+        - 10%-70%: wait for the coral to send a result
+        Return the turn angle if a beer is found
+        """
 
         # If there is a previous image, compare it with the current image
-        if previous_image is not None:
+        if new_image is not None:
             actual_image = cv2.imread(self.old_image)
             difference = VisionPi.compare_images(self.new_image, self.old_image)
 
-            if difference < 0.1:
-                logger.info(f"[{datetime.datetime.now()}] Images are too similar (<10%). Skipping.")
-                self.state = 0
-            elif 0.1 <= difference <= 0.7  or (0.1<=difference and self.mode==0):
-                logger.info(f"[{datetime.datetime.now()}] Images are moderately different (10%-70%). Processing.")
-                self.state = 1
-                #cropped_images_with_locations =VisionPi.test_bottle_detection(frame)
-                #location=VisionPi.process_cropped_image(self, cropped_images_with_locations)
-                #if self.state == 3 : 
-                #    VisionPi.calcul_direction(location)
-              
-            elif (difference > 0.7 and self.mode==2) or (0.1<=difference and self.mode==2):
-                logger.info(f"[{datetime.datetime.now()}] Images are highly different (>70%). Sending to Coral.")
-                self.state = 2
+            if difference < 0.1 :
+                 logger.info(f"[{datetime.datetime.now()}] Images are too similar (<10%). Skipping.")
+            elif 0.1 <= difference :
+                 logger.info(f"[{datetime.datetime.now()}] Images are moderately different (10%-70%). waiting for coral.")
+                pre_result=self.listener.get_latest_detections()
+                #self.result=[pre_result]
                 
-                #on attend un retour et on envoie a autopi la direction
+                
+                
 
         # Update the previous image
         cv2.imwrite(self.old_image, frame)
-        previous_image = cv2.imread(self.new_image)
-        logger.info(f"[{datetime.datetime.now()}] Updated previous frame as {self.path1}")
-
-        # Wait for the specified interval before capturing the next frame
-        time.sleep(self.interval)
-
+        self.old_image = cv2.imread(self.new_image)
+         logger.info(f"[{datetime.datetime.now()}] Updated previous frame as {self.path1}")
+        
         # Release the stream
         cap.release()
-        logger.info(f"[{datetime.datetime.now()}] Stream closed.")
+         logger.info(f"[{datetime.datetime.now()}] Stream closed.")
 
     def process_inference_data(self, data):
         """Processes incoming inference results from Coral."""
@@ -282,43 +255,44 @@ class VisionPi:
             detections = json.loads(data)
             return detections if detections else []
         except json.JSONDecodeError:
-            logger.info("[ERROR] Failed to decode JSON from incoming data.")
+             logger.info("[ERROR] Failed to decode JSON from incoming data.")
             return []
 
     def run(self):
         try:
+            self.listener._run()
             while self.running:
                 if self.mode == 0: # Pi only
-                    logger.info("Mode: Pi only")
-                    logger.info(f"[{datetime.datetime.now()}] Starting one image processing cycle...")
-                    """
+                    new_image=self.mjpeg_server.get_frame()
+                     logger.info("Mode: Pi only")
+                     logger.info(f" Starting one image processing cycle...")
                     # Process a single cycle
-                    self.run_1_time_hybrid()
-
-                    # React based on the state
-                    if self.state == 0:
-                        logger.info(f"[{datetime.datetime.now()}] State 0: No action required.")
-                        #wait until the coral get the 
-                    elif self.state == 3:
-                        logger.info(f"[{datetime.datetime.now()}] Alert: Bottle detected. Direction = {self.direction:.2f}°")
-                        self.message_queue.put({"type": "bottle_detected", "direction": self.direction})
-                    """
+                    self.one_image_processing_autonome()
+                    # React based on the state                  
                 elif self.mode == 1: # TODO Hybrid mode
                     # self.process_inference_data(data)
+                    self.one_image_processing_hybrid()
                     continue
                 elif self.mode == 2: # TODO coral mode
                     # self.process_inference_data(data)
                     continue
                 else: 
-                    logger.info("Unexpected mode: ", self.mode)
+                     print("Unexpected mode: ", self.mode)
                     break
+                if self.state == 0:
+                     logger.info(f"[{datetime.datetime.now()}] State 0: No action required.")
+                        #wait until the coral get the 
+                elif self.state == 1:
+                     print(f"[{datetime.datetime.now()}] Alert: Bottle detected. Direction = {self.direction:.2f}°")
+                    self.message_queue.put({"type": "bottle_detected", "direction": self.direction   })
                 # Wait for 4 seconds before repeating
                 time.sleep(4)
+            self.listener.stop()
         except Exception as e:
-            print(f"VisionPi Error: {e}")
+             logger.info(f"VisionPi Error: {e}")
 
 if __name__ == "__main__":
-    print("hello")
+  logger.info("hello")
 
 
 
