@@ -27,7 +27,7 @@ class VisionCoral:
         """
         Load the TensorFlow Lite model.
         """
-        print(f"[{datetime.now()}] Loading TensorFlow Lite model from {self.modelpath}...")
+        print(f"[{datetime.datetime.now()}] Loading TensorFlow Lite model from {self.modelpath}...")
         interpreter = tflite.Interpreter(model_path=self.modelpath)
         interpreter.allocate_tensors()
         return interpreter
@@ -117,7 +117,7 @@ class VisionCoral:
             """
 
             while True:
-                print(f"[{datetime.now()}] Starting one image processing cycle...")
+                print(f"[{datetime.datetime.now()}] Starting one image processing cycle...")
             
                 #wait for an image
                 

@@ -33,7 +33,7 @@ class VisionPi:
     """
     def load_tflite_model(self):
         #Load the TensorFlow Lite model.
-        print(f"[{datetime.now()}] Loading TensorFlow Lite model from {self.modelpath}...")
+        print(f"[{datetime.datetime.now()}] Loading TensorFlow Lite model from {self.modelpath}...")
         interpreter = tflite.Interpreter(model_path=self.modelpath)
         interpreter.allocate_tensors()
         return interpreter
@@ -60,12 +60,12 @@ class VisionPi:
     """
     
     def start(self):
-        """Starts the VisionPi listener in a separate thread."""
+        """Starts the VisionPi in a separate thread."""
         if not self.running:
             self.running = True
             self.thread = threading.Thread(target=self.run, daemon=True)
             self.thread.start()
-            print(f"VisionPi listener started on {self.listen_ip}:{self.listen_port}")
+            print(f"VisionPi started.")
 
     def stop(self):
         """Stops the VisionPi listener."""
@@ -88,7 +88,7 @@ class VisionPi:
 
         # Calculate difference percentage
         difference = 1 - score
-        print(f"[{datetime.now()}] SSIM score: {score:.4f}, Difference: {difference:.4f}")
+        print(f"[{datetime.datetime.now()}] SSIM score: {score:.4f}, Difference: {difference:.4f}")
         return difference
 
     def test_bottle_detection(self):
@@ -96,7 +96,7 @@ class VisionPi:
         Simulated bottle detection function that processes the image.
         Replace with the actual implementation.
         """
-        print(f"[{datetime.now()}] Processing image using test_bottle_detection...")
+        print(f"[{datetime.datetime.now()}] Processing image using test_bottle_detection...")
     
         # Resize the image for processing
         image = cv2.resize(self.new_image, (640, 480))
@@ -153,7 +153,7 @@ class VisionPi:
                     "path": save_path
                 })
 
-        print(f"[{datetime.now()}] Image processing complete. Cropped images saved to {self.cropped_images}.")
+        print(f"[{datetime.datetime.now()}] Image processing complete. Cropped images saved to {self.cropped_images}.")
     
         # Return the array of cropped image data
         return cropped_image_data
@@ -182,11 +182,11 @@ class VisionPi:
             is_beer = prediction[0][1] > 0.5  # If the probability of "beer" is greater than 0.5
 
             if is_beer:
-                print(f"[{datetime.now()}] Beer detected at position: {position}")
+                print(f"[{datetime.datetime.now()}] Beer detected at position: {position}")
                 self.state=4
                 return position  # Return immediately when a beer is detected
 
-        print(f"[{datetime.now()}] No beer detected in cropped images.")
+        print(f"[{datetime.datetime.now()}] No beer detected in cropped images.")
         self.state=3
         return None  # Return None if no beer is found
         """
@@ -231,12 +231,12 @@ class VisionPi:
         # Capture a frame from the stream
         ret, frame = cap.read()
         if not ret:
-            print(f"[{datetime.now()}] Error: Unable to read frame from stream.")
+            print(f"[{datetime.datetime.now()}] Error: Unable to read frame from stream.")
             return
 
         # Save the current frame to the actual image path
         cv2.imwrite(self.new_image, frame)
-        print(f"[{datetime.now()}] Saved current frame as {self.path2}")
+        print(f"[{datetime.datetime.now()}] Saved current frame as {self.path2}")
 
         # If there is a previous image, compare it with the current image
         if previous_image is not None:
@@ -244,10 +244,10 @@ class VisionPi:
             difference = VisionPi.compare_images(self.new_image, self.old_image)
 
             if difference < 0.1:
-                print(f"[{datetime.now()}] Images are too similar (<10%). Skipping.")
+                print(f"[{datetime.datetime.now()}] Images are too similar (<10%). Skipping.")
                 self.state = 0
             elif 0.1 <= difference <= 0.7  or (0.1<=difference and self.mode==0):
-                print(f"[{datetime.now()}] Images are moderately different (10%-70%). Processing.")
+                print(f"[{datetime.datetime.now()}] Images are moderately different (10%-70%). Processing.")
                 self.state = 1
                 #cropped_images_with_locations =VisionPi.test_bottle_detection(frame)
                 #location=VisionPi.process_cropped_image(self, cropped_images_with_locations)
@@ -255,7 +255,7 @@ class VisionPi:
                 #    VisionPi.calcul_direction(location)
               
             elif (difference > 0.7 and self.mode==2) or (0.1<=difference and self.mode==2):
-                print(f"[{datetime.now()}] Images are highly different (>70%). Sending to Coral.")
+                print(f"[{datetime.datetime.now()}] Images are highly different (>70%). Sending to Coral.")
                 self.state = 2
                 
                 #on attend un retour et on envoie a autopi la direction
@@ -263,14 +263,14 @@ class VisionPi:
         # Update the previous image
         cv2.imwrite(self.old_image, frame)
         previous_image = cv2.imread(self.new_image)
-        print(f"[{datetime.now()}] Updated previous frame as {self.path1}")
+        print(f"[{datetime.datetime.now()}] Updated previous frame as {self.path1}")
 
         # Wait for the specified interval before capturing the next frame
         time.sleep(self.interval)
 
         # Release the stream
         cap.release()
-        print(f"[{datetime.now()}] Stream closed.")
+        print(f"[{datetime.datetime.now()}] Stream closed.")
 
     def process_inference_data(self, data):
         """Processes incoming inference results from Coral."""
@@ -286,17 +286,17 @@ class VisionPi:
             while self.running:
                 if self.mode == 0: # Pi only
                     print("Mode: Pi only")
-                    print(f"[{datetime.now()}] Starting one image processing cycle...")
+                    print(f"[{datetime.datetime.now()}] Starting one image processing cycle...")
                     """
                     # Process a single cycle
                     self.run_1_time_hybrid()
 
                     # React based on the state
                     if self.state == 0:
-                        print(f"[{datetime.now()}] State 0: No action required.")
+                        print(f"[{datetime.datetime.now()}] State 0: No action required.")
                         #wait until the coral get the 
                     elif self.state == 3:
-                        print(f"[{datetime.now()}] Alert: Bottle detected. Direction = {self.direction:.2f}°")
+                        print(f"[{datetime.datetime.now()}] Alert: Bottle detected. Direction = {self.direction:.2f}°")
                         self.message_queue.put({"type": "bottle_detected", "direction": self.direction})
                     """
                 elif self.mode == 1: # TODO Hybrid mode

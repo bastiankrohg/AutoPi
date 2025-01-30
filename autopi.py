@@ -118,14 +118,14 @@ class AutoPi:
                 message = self.message_queue.get()
                 if message["type"] == "bottle_detected":
                     direction = message["direction"]
-                    print(f"[{datetime.now()}] AutoPi: Bottle detected. Generating path towards direction {direction:.2f} degrees.")
+                    print(f"[{datetime.datetime.now()}] AutoPi: Bottle detected. Generating path towards direction {direction:.2f} degrees.")
                     self.change_heading(int(direction))
                     self.state=RoverState.PURSUING_RESOURCE
 
                 # Check ObstacleController alerts
                 if self.obstacle_detector.is_alerted():
                     self.near_beer=1
-                    print(f"[{datetime.now()}] Obstacle detected! Switching to avoiding obstacle mode.")
+                    print(f"[{datetime.datetime.now()}] Obstacle detected! Switching to avoiding obstacle mode.")
                     #self.set_state(RoverState.AVOIDING_OBSTACLE)
                 
                     #self.avoid_obstacle()
@@ -227,20 +227,47 @@ class AutoPi:
         return self.heading
 
     def to_the_next_point(self): 
-        next_position=self.current_path.pop(0)
+        if not self.current_path:
+            print("No more points in the path.")
+            return
+
+        next_position = self.current_path.pop(0)  # Get the next point
         shift_x = next_position[0] - self.map_center[0]
         shift_y = next_position[1] - self.map_center[1]
-        ang= int( math.atan(shift_y/shift_x) )
-        rotate_ang=ang-self.heading
-        number_rotations=int(abs( math.degrees(rotate_ang) /5) )
-        if (rotate_ang<0) :
-            for i in range(number_rotations): 
-                self.motor_controller.TurnLeft(5)
-        else :
-            for i in range(number_rotations): 
-                self.motor_controller.TurnRight(5)
-        self.heading+=math.degrees(ang) % 360
-        self.motor_controller.Driveforward()
+
+        if shift_x == 0 and shift_y == 0:
+            print("Already at target position.")
+            return
+
+        # Calculate target heading using atan2 (prevents division by zero)
+        target_angle = math.degrees(math.atan2(shift_y, shift_x))
+
+        # Normalize angles to be within 0-360 range
+        current_heading = self.heading % 360
+        target_angle = target_angle % 360
+
+        # Compute the shortest rotation direction
+        rotate_ang = (target_angle - current_heading + 180) % 360 - 180  # This ensures rotation is between -180 to 180
+
+        if abs(rotate_ang) > 1:  # Avoid unnecessary small rotations
+            if rotate_ang < 0:
+                self.motor_controller.TurnLeft(abs(rotate_ang))
+            else:
+                self.motor_controller.TurnRight(abs(rotate_ang))
+        
+        # Update heading
+        self.heading = target_angle
+
+        # Compute Euclidean distance to move forward
+        distance = math.sqrt(shift_x**2 + shift_y**2)
+
+        print(f"Moving to {next_position}, turning {rotate_ang:.2f} degrees, then driving {distance:.2f} units forward.")
+
+        # Move forward
+        self.motor_controller.DriveForward(distance)
+
+        # Update internal map representation
+        self.map_center = next_position  # Update rover's position
         self.update_map()
     """           
     def update_map_obstacle(self,distance):
