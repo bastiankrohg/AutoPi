@@ -94,7 +94,7 @@ def start_mjpeg_server(server):
 
 def start_server():
     server_address = ('', 8080)  # Bind to all interfaces on port 8080
-    server = MJPEGStreamServer(server_address, MJPEGStreamHandler)
+    server = MJPEGStreamServer(MJPEGStreamHandler)
 
     # Start the camera stream in a separate thread
     camera_thread = threading.Thread(target=start_camera_stream, args=(server,), daemon=True)

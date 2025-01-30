@@ -85,7 +85,7 @@ class AutoPi:
         self.telemetry.start()
 
         # MJPEG thread
-        self.mjpeg_server = MJPEGStreamServer(('', 8080), MJPEGStreamHandler)
+        self.mjpeg_server = MJPEGStreamServer(MJPEGStreamHandler)
         #self.mjpeg_thread = threading.Thread(target=start_mjpeg_server, kwargs={"port": 8080}, daemon=True)
         self.mjpeg_thread = threading.Thread(target=self.mjpeg_server.start, kwargs={"port": 8080}, daemon=True)
         self.mjpeg_thread.start()
