@@ -371,14 +371,15 @@ class AutoPi:
                 #self.navigation_controller.follow_path(self.map_center, self.current_path)
                 self.display_debug_info()
                 time.sleep(0.1)
-                
+                """
                 resource = self.vision.ultrasound_sensor() # TODO Fix?
                 if resource:
                     logging.info(f"Something detected ahead: {resource}")
                     self.target_resource = resource
                     self.set_state(RoverState.PURSUING_RESOURCE)
                     return
-                
+                """
+                    
     def simulation_mode(self):
         logging.info("Entering simulation mode...")
         while self.state == RoverState.SIMULATING:
@@ -510,9 +511,9 @@ if __name__ == "__main__":
     parser.add_argument("--dashboard", action="store_true", help="Show the real-time telemetry dashboard.")
     args = parser.parse_args()
 
-    TELEMETRY_IP = "127.0.0.1"  # Replace with actual IP address
-    TELEMETRY_PORT = 50055  # Replace with actual port
-
+    TELEMETRY_IP = "127.0.0.1" 
+    TELEMETRY_PORT = 50055  
+    
     logging.info("Initializing rover...")
     try:
         pi = AutoPi(TELEMETRY_IP, TELEMETRY_PORT, debug_mode=args.debug, path_type=args.path, sim_mode=args.sim)
