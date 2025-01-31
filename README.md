@@ -1,13 +1,17 @@
 # AutoPi: Autonomous Mars Rover Project
 
 ## Important Links to development and testing repos: 
+### Current System
+- **[AutoPi (Current)](https://github.com/bastiankrohg/AutoPi/tree/dev_vision)** – Active development branch of the project.
+- **[CoralCom](https://github.com/bastiankrohg/CoralCom)** – Store-and-forward communication and retransmission for Coral Dev Board.
+- **[MissionControl](https://github.com/bastiankrohg/MissionCtrl)** – PC-based telemetry receiver and dashboard visualization.
+- **[MJPEG Streaming Server - Inside AutoPi](https://github.com/bastiankrohg/AutoPi/blob/dev_vision/mjpeg.py)** – Video streaming for the rover.
+
 ### Core Components
 - **[SmartRover](https://github.com/bastiankrohg/smart-rover)** – Core rover control system.
-- **[AutoPi (Current)](https://github.com/bastiankrohg/AutoPi/tree/dev_vision)** – Active development branch of the project.
 
 ### Telemetry & Visualization
 - **[Telemetry](https://github.com/bastiankrohg/rover-telemetry)** – Rover telemetry data collection and transmission.
-- **[MissionControl](https://github.com/bastiankrohg/MissionCtrl)** – PC-based telemetry receiver and dashboard visualization.
 
 ### Navigation & Path Planning
 - **[2DMap (PyGame)](https://github.com/bastiankrohg/2Dmap/tree/main)** – 2D simulation and visualization for path planning.
@@ -15,10 +19,6 @@
 
 ### Computer Vision & Detection
 - **[Detection/Computer Vision Testing](https://github.com/bastiankrohg/detection)** – Object detection and resource identification experiments.
-
-### Communication & Streaming
-- **[MJPEG Streaming Server](https://github.com/bastiankrohg/AutoPi/blob/dev_vision/mjpeg.py)** – Video streaming for the rover.
-- **[CoralCom](https://github.com/bastiankrohg/CoralCom)** – Store-and-forward communication and retransmission for Coral Dev Board.
 
 ## Overview
 AutoPi is an autonomous rover project designed for exploring unknown terrains, developed for our final-year engineering project at INSA Toulouse. The system integrates a 4tronix Mars Rover with advanced software modules for navigation, obstacle avoidance, path planning, and telemetry. The project leverages both hardware and software innovations to create a semi-autonomous exploration vehicle capable of executing pre-defined patterns, avoiding obstacles, and dynamically adjusting its path. Also, we leverage the Picamera2 coupled with the Raspberry Pi Zero to stream video, and for capturing images that we use during the image processing and vision parts of the projects. 
