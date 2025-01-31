@@ -107,7 +107,7 @@ class AutoPi:
         # MJPEG thread
         server_address = ('', 8080)  # Bind to all interfaces on port 8080
         self.mjpeg_server = MJPEGStreamServer(server_address, MJPEGStreamHandler)
-        self.mjpeg_thread = threading.Thread(target=start_mjpeg_server, daemon=True)
+        self.mjpeg_thread = threading.Thread(target=start_mjpeg_server, args=(self.mjpeg_server,), daemon=True)
         #self.mjpeg_thread = threading.Thread(target=self.mjpeg_server.start, daemon=True)
         self.mjpeg_thread.start()
 
