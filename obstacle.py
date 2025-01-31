@@ -2,10 +2,14 @@ import threading
 import time
 from queue import SimpleQueue
 
-class ObstacleDetector:
+import logging
+# Use existing logger
+logger = logging.getLogger(__name__)
+
+class ObstacleController:
     def __init__(self, ultrasound_sensor, camera_sensor=None, detection_interval=0.1):
         """
-        ObstacleDetector monitors the sensors and triggers an alert if an obstacle is detected.
+        ObstacleController monitors the sensors and triggers an alert if an obstacle is detected.
 
         Args:
             ultrasound_sensor: A callable object/function that returns distance to nearest object.
@@ -40,14 +44,14 @@ class ObstacleDetector:
             self.running = True
             self.detection_thread = threading.Thread(target=self._check_sensors, daemon=True)
             self.detection_thread.start()
-            print("ObstacleDetector started.")
+            logger.info("ObstacleController started.")
 
     def stop(self):
         """Stops the obstacle detection thread."""
         self.running = False
         if hasattr(self, 'detection_thread'):
             self.detection_thread.join()
-            print("ObstacleDetector stopped.")
+            logger.info("ObstacleController stopped.")
 
     def reset_alert(self):
         """Resets the obstacle alert."""
@@ -75,13 +79,13 @@ def mock_camera_sensor():
     return random.choice([True, False, False, False])  # 25% chance to detect
 
 if __name__ == "__main__":
-    detector = ObstacleDetector(mock_ultrasound_sensor, mock_camera_sensor)
+    detector = ObstacleController(mock_ultrasound_sensor, mock_camera_sensor)
     detector.start()
 
     try:
         while True:
             if detector.is_alerted():
-                print("Obstacle detected! Source:", detector.get_alert_source())
+                logger.warning("Obstacle detected! Source:", detector.get_alert_source())
                 detector.reset_alert()
             time.sleep(0.1)
     except KeyboardInterrupt:
