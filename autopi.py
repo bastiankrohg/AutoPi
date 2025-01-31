@@ -214,8 +214,8 @@ class AutoPi:
             shift_y = next_position[1] - self.map_center[1]
             self.obstacles = {(x - shift_x, y - shift_y) for (x, y) in self.obstacles}
             self.map_center = next_position
-            print(f"Environment shifted to keep rover centered at {self.map_center}")
-            logging.info(f"Environment shifted to keep rover centered at {self.map_center)}")        
+            print(f"Environment shifted to keep rover centered at {str(self.map_center)}")
+            logging.info(f"Environment shifted to keep rover centered at {str(self.map_center)}")        
 
     def change_heading(self, new_heading: int) -> int:
         """
