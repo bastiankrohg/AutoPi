@@ -110,7 +110,8 @@ if __name__ == "__main__":
             "position": (0, 0),
             "heading": "N",
             "battery_level": 100,
-            "ultrasound_distance": rover.rover.getDistance(),
+            #"ultrasound_distance": rover.rover.getDistance(),
+            "ultrasound_distance": 50.0,
             "state": "Idle",
             "proximity_alert": None
         }
