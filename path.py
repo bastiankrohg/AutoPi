@@ -24,7 +24,7 @@ def generate_straight_line_path(length, step_size, start_position=(0, 0)):
         y += step_size  # Move north/up
         path.append((x, y))
 
-    logger.info("Generated path: ", path)
+    logger.info("Generated path: %s", path)
     return path
 
 def generate_random_walk_path(steps, step_size, start_position=(0, 0)):
@@ -49,7 +49,7 @@ def generate_random_walk_path(steps, step_size, start_position=(0, 0)):
         y += dy
         path.append((x, y))
 
-    logger.info("Generated path: ", path)
+    logger.info("Generated path: %s", path)
     return path
 
 def generate_spiral_pattern(step_size, num_turns, start_position=(0, 0)):
@@ -76,7 +76,7 @@ def generate_spiral_pattern(step_size, num_turns, start_position=(0, 0)):
         y += dy
         path.append((round(x), round(y)))
 
-    logger.info("Generated path: ", path)
+    logger.info("Generated path: %s", path)
     return path
 
 def generate_zigzag_pattern(step_size, width, height, start_position=(0, 0)):
@@ -109,7 +109,7 @@ def generate_zigzag_pattern(step_size, width, height, start_position=(0, 0)):
         y += step_size
         path.append((x, y))
 
-    logger.info("Generated path: ", path)
+    logger.info("Generated path: %s", path)
     return path
 
 def generate_sine_wave_path(amplitude, wavelength, total_distance, step_size=1, start_position=(0, 0)):
@@ -131,7 +131,7 @@ def generate_sine_wave_path(amplitude, wavelength, total_distance, step_size=1, 
     y_values = amplitude * np.sin(2 * np.pi * x_values / wavelength)
     path = [(round(x_start + x), round(y_start + y)) for x, y in zip(x_values, y_values)]
 
-    logger.info("Generated path: ", path)
+    logger.info("Generated path: %s", path)
     return path
 
 def generate_expanding_square_path(step_size, num_layers, start_position=(0, 0)):
@@ -159,7 +159,7 @@ def generate_expanding_square_path(step_size, num_layers, start_position=(0, 0))
                 y += dy
                 path.append((x, y))
             dir_index = (dir_index + 1) % 4  # Turn to the next direction
-    logger.info("Generated path: ", path)
+    logger.info("Generated path: %s", path)
     return path
 
 if __name__ == "__main__":
