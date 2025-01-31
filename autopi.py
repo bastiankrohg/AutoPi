@@ -115,13 +115,13 @@ class AutoPi:
         # Initialize VisionPi instance with the queue
         self.vision = VisionPi(
             rtsp_url="rtsp://example.com/stream",
-            path1="/home/pi/new_image.jpg",
-            path2="/home/pi/old_image.jpg",
-            path3="/home/pi/cropped_images",
+            #path1="/home/pi/new_image.jpg",
+            #path2="/home/pi/old_image.jpg",
+            #path3="/home/pi/cropped_images",
             modelpath="/home/pi/models/beer_model.tflite",
             mode=0,
             message_queue=self.message_queue, 
-            mjpeg=self.mjpeg_server
+            mjpeg_server=self.mjpeg_server
         )
         self.vision_thread = threading.Thread(target=self.vision.start, daemon=True)
         self.vision_thread.start()
