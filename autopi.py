@@ -114,11 +114,14 @@ class AutoPi:
         # Vision thread
         # Initialize VisionPi instance with the queue
         self.vision = VisionPi(
-            rtsp_url="http://localhost:8080/stream",
+            rtsp_url="rtsp://example.com/stream",
+            path1="/home/pi/new_image.jpg",
+            path2="/home/pi/old_image.jpg",
+            path3="/home/pi/cropped_images",
             modelpath="/home/pi/models/beer_model.tflite",
             mode=0,
             message_queue=self.message_queue, 
-            mjpeg_server=self.mjpeg_server
+            mjpeg=self.mjpeg_server
         )
         self.vision_thread = threading.Thread(target=self.vision.start, daemon=True)
         self.vision_thread.start()
@@ -212,7 +215,7 @@ class AutoPi:
             self.obstacles = {(x - shift_x, y - shift_y) for (x, y) in self.obstacles}
             self.map_center = next_position
             print(f"Environment shifted to keep rover centered at {self.map_center}")
-            logging.info(f"Environment shifted to keep rover centered at {self.map_center}")        
+            logging.info(f"Environment shifted to keep rover centered at {self.map_center)}")        
 
     def change_heading(self, new_heading: int) -> int:
         """
@@ -234,13 +237,13 @@ class AutoPi:
 
         # Choose the shortest turn direction
         if delta_right < delta_left:
-            logging.info(f"Turning Right by {delta_right} degrees")
+            logging.info(f"Turning Right by {str(delta_right)} degrees")
             while delta_right > 0:
                 step = min(5, delta_right)  # Ensure we don't overshoot
                 self.motor_controller.TurnRight(step)
                 delta_right -= step
                 self.heading = (self.heading + step) % 360  # Keep within [0,360]
-                logging.info(f"Updated heading: {self.heading}°")
+                logging.info(f"Updated heading: {str(self.heading)}°")
                 time.sleep(0.1)  # Small delay for motor execution
 
         else:
@@ -250,7 +253,7 @@ class AutoPi:
                 self.motor_controller.TurnLeft(step)
                 delta_left -= step
                 self.heading = (self.heading - step) % 360  # Keep within [0,360]
-                logging.info(f"Updated heading: {self.heading}°")
+                logging.info(f"Updated heading: {str(self.heading)}°")
                 time.sleep(0.1)  # Small delay for motor execution
 
         return self.heading
@@ -273,7 +276,7 @@ class AutoPi:
         
         self.change_heading(target_angle)
         if self.heading==target_angle: 
-            logging.info("heading ok: ", self.heading)
+            logging.info("heading ok: ", str(self.heading))
         # Update heading
         #self.heading = target_angle
 
@@ -303,7 +306,7 @@ class AutoPi:
 
         # Update internal map representation
         self.map_center = next_position  # Update rover's position
-        logging.info(f"Next Position: {next_position}, New Heading: {self.heading} ")
+        logging.info(f"Next Position: {next_position}, New Heading: {str(self.heading)} ")
         self.update_map()
 
     """           
@@ -361,7 +364,7 @@ class AutoPi:
         while self.state == RoverState.EXPLORING:
         
             self.current_path = self.generate_path()
-            logging.info(f"Generated path: {self.current_path}")
+            logging.info(f"Generated path: {str(self.current_path)}")
 
             while self.current_path and self.state == RoverState.EXPLORING:
                 self.to_the_next_point()
@@ -382,7 +385,7 @@ class AutoPi:
         while self.state == RoverState.SIMULATING:
             if not self.current_path:
                 self.current_path = self.generate_path()
-                logging.info(f"Generated path for simulation: {self.current_path}")
+                logging.info(f"Generated path for simulation: {str(self.current_path)}")
 
             if self.current_path:
                 next_waypoint = self.current_path.pop(0)
